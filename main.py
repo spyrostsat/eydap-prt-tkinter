@@ -33,19 +33,19 @@ def splash_screen():
     splash.mainloop()
 
 def start_main_script():
-    from src.SG_pipe_replacement_tool import PipeReplacementTool
+    from src.pipe_replacement_tool import PipeReplacementTool
     globals.prt = PipeReplacementTool()
-    globals.prt.run()
+    # globals.prt.run()
     sys.exit()  # Ensure the script exits properly
 
 if __name__ == '__main__':
     # Start the splash screen in a separate process
-    splash_process = multiprocessing.Process(target=splash_screen)
-    splash_process.start()
+    # splash_process = multiprocessing.Process(target=splash_screen)
+    # splash_process.start()
 
     # Run the main script in the primary process
     start_main_script()
 
     # Ensure the splash screen process ends
-    splash_process.join()
-    print("Splash screen process ended.")
+    # splash_process.join()
+    # print("Splash screen process ended.")
