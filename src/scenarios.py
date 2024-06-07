@@ -8,6 +8,12 @@
 # Copyright:   (c) NTUA 2024
 # Licence:     All rights reserved
 #-------------------------------------------------------------------------------
+
+from pathlib import Path
+import sys
+path_root = Path(__file__).parents[1]
+sys.path.append(str(path_root))
+
 import sqlite3
 import shutil
 import os
@@ -17,7 +23,7 @@ from src.utils import copy_shapefile
 from src import globals
 
 
-scenarios_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scenarios")
+scenarios_directory = os.path.join(os.path.expanduser("~"), "Pipe Replacement Tool Projects")
 
 SCENARIO_STATUS = {
     1: "Initialised",
@@ -527,7 +533,8 @@ cursor.execute(create_table_query)
 ##print(f'Selected Scenario ID: {selected_scenario_id}')
 
 # Insert a sample record for the baseline scenario
-##Scenario('Baseline', 'This is the baseline scenario.', 1).save()
+# for i in range(1, 11):
+# 	Scenario(f'Scenario {i}', f'This is the scenario {i}.', '/home/spyrostsat/Projects/ntua/eydap/shapefiles/network/Pipes_WG_export.shp', '/home/spyrostsat/Projects/ntua/eydap/shapefiles/damage/Vlaves_Combined.shp').save()
 
 # ############# Test scenario DB operations ####################################
 # Create a new scenario

@@ -32,7 +32,7 @@ def splash_screen():
     # Run the splash screen
     splash.mainloop()
 
-def start_main_script():
+def start_main_script():	
     from src.pipe_replacement_tool import PipeReplacementTool
     globals.prt = PipeReplacementTool()
     # globals.prt.run()
