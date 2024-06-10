@@ -1,7 +1,10 @@
+from typing import List, Dict
 import glob
 import string
 import os
+import json
 import shutil
+import time
 
 
 def is_valid_project_name(project_name: str) -> bool:
@@ -33,3 +36,50 @@ def copy_shapefile(shp_type: str, src_path: str, project_folder: str) -> str:
 
 def shapefile_bare_name(src_path: str) -> str:
     return os.popen(f"ls {src_path}").readlines()[0].split("\n")[0].split(".")[0]
+
+
+def updates_scenarios_config_file(scenario_folder: str, name: str, description: str) -> None:
+    # Open a json file called .prt.conf or create one if it doesn't exist and save the project folder path and update timestamp
+    # This file should already contain the info of other previous projects if they exist so we need to read the file first
+    config_file = os.path.join(os.path.expanduser("~"), ".prt.conf")
+    if os.path.exists(config_file):
+        with open(config_file, "r") as f:
+            data = json.load(f)
+    else:
+        data = []
+        
+    # Check if the project folder is already in the list
+    project_exists = False
+    for project in data:
+        if project["project_folder"] == scenario_folder:
+            project_exists = True
+            break
+            
+    if not project_exists:
+        data.append({
+            "project_folder": scenario_folder,
+            "name": name,
+            "description": description,
+            "timestamp": time.time()
+        })
+    else:
+        for project in data:
+            if project["project_folder"] == scenario_folder:
+                project["timestamp"] = time.time()
+                break
+
+    with open(config_file, "w") as f:
+        json.dump(data, f)
+
+
+def read_scenarios_config_file() -> List[Dict]:
+    # Open a json file called .prt.conf or create one if it doesn't exist and save the project folder path and update timestamp
+    # This file should already contain the info of other previous projects if they exist so we need to read the file first
+    config_file = os.path.join(os.path.expanduser("~"), ".prt.conf")
+    if os.path.exists(config_file):
+        with open(config_file, "r") as f:
+            data = json.load(f)
+    else:
+        data = []
+        
+    return data
