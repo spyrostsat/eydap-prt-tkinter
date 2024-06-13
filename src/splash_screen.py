@@ -10,18 +10,16 @@ class SplashScreen:
 
         # Set the size and position of the splash screen
         # Center the window
-        window_width = self.screen_width // 6
-        window_height = self.screen_height // 4
+        window_width = self.screen_width // 5
+        window_height = self.screen_height // 3.5
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         self.splash.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
         
         self.splash.configure(bg="#1d2b59")
-        
         self.splash.config(cursor="watch")
-
+        self.splash.overrideredirect(True)  # Remove the close, maximize, and minimize buttons
         self.logo_image = tk.PhotoImage(file='./src/img/logo.png')
-        
         
         self.logo_label = tk.Label(self.splash, bg="#1d2b59", image=self.logo_image)
         self.logo_label.pack(expand=True)
@@ -32,3 +30,4 @@ class SplashScreen:
 
         # Run the splash screen
         self.splash.mainloop()
+        

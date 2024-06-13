@@ -1,11 +1,15 @@
+from tkintermapview.canvas_path import CanvasPath
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
+from shapely.geometry import Point
+from src.map_utils import *
 from copy import deepcopy
 import tkinter as tk
 import tkintermapview
 import time
 from src.utils import *
+from src.const import MATERIAL_COLORS
 import os
 from src.tools import *
 import ctypes
@@ -29,6 +33,7 @@ class PipeReplacementTool:
         self.bg = "#F0F0F0"
         self.fg = "#000000"
         self.blue_bg = "#1d2b59"
+        self.light_blue_bg = "#4d648d"
         self.danger_bg = "#FF0000"
         self.success_bg = "#00FF00"
         self.button_bg = "#FAD5A5"
@@ -188,9 +193,20 @@ class PipeReplacementTool:
     
 
     def tv_on_double_click(self, event):
-        item = self.recent_scenarios.selection()[0]
-        project_folder = self.recent_scenarios.item(item, "values")[0]
-        self.open_scenario(project_folder)
+        try:
+            item = self.recent_scenarios.selection()[0]
+            project_folder = self.recent_scenarios.item(item, "values")[0]
+            self.open_scenario(project_folder)
+        except IndexError:
+            pass
+
+    
+    def handle_pipe_line_click(self, canvas_path: CanvasPath):
+        pipe_index = int(canvas_path.name)
+        pipe_id = self.network_shapefile_attributes['ID'][pipe_index]
+        pipe_label = self.network_shapefile_attributes['LABEL'][pipe_index]
+        pipe_material = self.network_shapefile_attributes['MATERIAL'][pipe_index]
+        messagebox.showinfo(f"Pipe with ID={pipe_id} clicked", f"Pipe Label: {pipe_label}\nPipe Material: {pipe_material}")
     
     
     def save_scenario(self):
@@ -222,6 +238,8 @@ class PipeReplacementTool:
         self.project_description = None
         self.network_shapefile = None
         self.damage_shapefile = None
+        
+        self.network_shapefile_attributes = None
         
         # Initialize all other class variables to None
         self.recent_scenarios = None
@@ -289,6 +307,8 @@ class PipeReplacementTool:
     
     
     def main_page(self):
+        bounding_box, network_shp_centroid, pipes_lines_paths, self.network_shapefile_attributes = extract_shapefile_data(self.network_shapefile)
+        
         # Add the 'Save' button to the menu bar above the Exit button
         self.fileMenu.add_command(label="Save", command=self.save_scenario)
         # self.fileMenu.add_command(label="Save as...")
@@ -304,38 +324,12 @@ class PipeReplacementTool:
         self.map_frame.grid_propagate(False)
         
         map_widget = tkintermapview.TkinterMapView(self.map_frame, width=800, height=600, corner_radius=0)
-        map_widget.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        switzerland_marker = map_widget.set_address("Switzerland", marker=True, text="Switzerland")
-        map_widget.set_zoom(8)
+        map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)  # google satellite
 
-        polygon_1 = map_widget.set_polygon([(46.0732306, 6.0095215),
-                                            (46.3393433, 6.2072754),
-                                            (46.5890691, 6.1083984),
-                                            (46.7624431, 6.4270020),
-                                            (47.2717751, 7.0312500),
-                                            (47.4726629, 6.9982910),
-                                            (47.4057853, 7.3718262),
-                                            (47.5468716, 7.9650879),
-                                            (47.5691138, 8.4045410),
-                                            (47.7540980, 8.6242676),
-                                            (47.5691138, 9.4482422),
-                                            (47.1897125, 9.5581055),
-                                            (46.9352609, 9.8327637),
-                                            (46.9727564, 10.4150391),
-                                            (46.6418940, 10.4479980),
-                                            (46.4605655, 10.0744629),
-                                            (46.2786312, 10.1513672),
-                                            (46.3469276, 9.5581055),
-                                            (46.4454275, 9.3493652),
-                                            (45.8211434, 8.9538574),
-                                            (46.1037088, 8.6352539),
-                                            (46.3696741, 8.3496094),
-                                            (45.9740604, 7.9321289),
-                                            (45.8900082, 7.0971680),
-                                            (46.1417827, 6.8664551),
-                                            (46.4151388, 6.7236328),
-                                            (46.3772542, 6.4160156)],
-                                        # fill_color=None,
-                                        # outline_color="red",
-                                        # border_width=12,
-                                        name="switzerland_polygon")
+        map_widget.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        map_widget.fit_bounding_box((bounding_box[3], bounding_box[0]), (bounding_box[1], bounding_box[2]))
+                
+        for index, line_path in enumerate(pipes_lines_paths):
+            pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
+            map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
