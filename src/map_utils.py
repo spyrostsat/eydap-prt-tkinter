@@ -19,7 +19,6 @@ def extract_shapefile_data(shapefile_path: str):
 
     # Calculate the centroid of the bounding box
     bbox_centroid = bbox_polygon.centroid
-    print(f"Bounding box centroid: {bbox_centroid}")
     
     pipes_lines_paths: List[List[Tuple[float, float]]] = []
     

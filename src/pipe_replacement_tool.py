@@ -9,7 +9,7 @@ import tkinter as tk
 import tkintermapview
 import time
 from src.utils import *
-from src.const import MATERIAL_COLORS
+from src.const import MATERIAL_COLORS, LEFT_MENU
 import os
 from src.tools import *
 import ctypes
@@ -38,6 +38,9 @@ class PipeReplacementTool:
         self.success_bg = "#00FF00"
         self.button_bg = "#FAD5A5"
         self.button_fg = "#006994"
+        self.border_color = "#dddddd"
+        self.tk_grey = "#d9d9d9"
+        self.white = "#ffffff"
         
         # Let's create the root window
         self.root = tk.Tk()
@@ -315,21 +318,71 @@ class PipeReplacementTool:
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label="Exit", command=self.root.quit)
         
-        self.main_page_frame = tk.Frame(self.root, bg=self.bg)
-        self.main_page_frame.pack(expand=True, fill='both')
-        tk.Label(self.main_page_frame, text=f"{self.project_name}", bg=self.bg, fg=self.fg, font=(self.font, self.font_size)).pack()
-
-        self.map_frame = tk.Frame(self.main_page_frame, bg=self.bg)
-        self.map_frame.pack(expand=True, fill='both')
-        self.map_frame.grid_propagate(False)
+        top_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15))
+        top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
         
-        map_widget = tkintermapview.TkinterMapView(self.map_frame, width=800, height=600, corner_radius=0)
-        map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)  # google satellite
+        # Insert the project name and description
+        label_text = f"{self.project_name}\n{self.project_description}"
+        tk.Label(top_frame, text=label_text, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size / 1.7)), padx=10, pady=10).pack(expand=True, fill='both')
+    
+        # Create and place the frames
+        top_height = int(self.height * 0.7)
+        
+        left_frame_width_mult = 0.2
+        map_width_multiplier = 0.6
+        right_frame_width_mult = 1 - left_frame_width_mult - map_width_multiplier
 
-        map_widget.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        left_frame = tk.Frame(self.root, width=int(self.width * left_frame_width_mult), height=top_height)
+        left_frame.grid(row=1, column=0, sticky="nsew")
+
+        middle_frame = tk.Frame(self.root, width=int(self.width * map_width_multiplier), height=top_height, bg=self.bg, border=1, borderwidth=1, relief="solid")
+        middle_frame.grid(row=1, column=1, sticky="nsew")
+
+        right_frame = tk.Frame(self.root, width=int(self.width *right_frame_width_mult), height=top_height, bg=self.white, border=1, borderwidth=1, relief="solid")
+        right_frame.grid(row=1, column=2, sticky="nsew")
+
+        bottom_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15), bg=self.bg)
+        bottom_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
+
+        # Configure grid weights to allow expansion
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_columnconfigure(2, weight=1)
+        self.root.grid_rowconfigure(0, weight=0)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_rowconfigure(2, weight=0)
+        
+        map_widget = tkintermapview.TkinterMapView(middle_frame, width=int(self.width * map_width_multiplier), height=top_height)
+        map_widget.pack(expand=True, fill='both', padx=50, pady=50)
         
         map_widget.fit_bounding_box((bounding_box[3], bounding_box[0]), (bounding_box[1], bounding_box[2]))
                 
         for index, line_path in enumerate(pipes_lines_paths):
             pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
             map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
+
+        tree = ttk.Treeview(left_frame, show="tree")
+        tree.column("#0", width=int(self.width * left_frame_width_mult))
+        tree.heading("#0", text="Setup")
+        tree.pack(expand=True, fill='both')
+        
+        # Add vertical padding to Treeview items
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=35)  # Adjust rowheight as needed
+        style.configure("Treeview", font=(self.font, int(self.font_size // 2.5)))
+
+        # Add items to Treeview
+        parent_nodes = {}
+        for item in LEFT_MENU:
+            if not item["leaf"]:
+                parent_node = tree.insert("", "end", text=item["name"], open=True)
+                parent_nodes[item["step"]] = parent_node
+            else:
+                tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
+        
+        
+        # Add the right frame widgets
+        tk.Label(right_frame, text="     Selected Property     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        
+        # Add the bottom frame widgets
+        tk.Label(bottom_frame, text="Message Window", fg=self.fg, bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=30)
