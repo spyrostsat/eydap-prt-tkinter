@@ -17,6 +17,8 @@ import platform
 import json
 import warnings
 from typing import List
+import geopandas as gpd
+import numpy as np
 
 
 class PipeReplacementTool:
@@ -48,8 +50,11 @@ class PipeReplacementTool:
         self.root.resizable(True, True)
         
         # Let's find the width and height of the screen
-        self.screen_width = self.root.winfo_screenwidth()
-        self.screen_height = self.root.winfo_screenheight()
+        
+        # self.screen_width = self.root.winfo_width()
+        # self.screen_height = self.root.winfo_height()
+        self.screen_width = 1920
+        self.screen_height = 1080
         
         screen_multiplier = 1  # we will use this variable to adjust the size of the root window
         
@@ -90,7 +95,7 @@ class PipeReplacementTool:
             
             if name and description and network and damage and network.endswith(".shp") and damage.endswith(".shp"):
                 # Create a folder with the scenario name inside the selected folder
-                scenario_folder = os.path.join(folder, name)
+                scenario_folder = os.path.join(folder, name, "")
                 os.makedirs(scenario_folder, exist_ok=True)
                 
                 network_shp = os.path.join(scenario_folder, os.path.basename(network))
@@ -190,6 +195,17 @@ class PipeReplacementTool:
         self.project_description = metadata["project_description"]
         self.network_shapefile = metadata["network_shapefile"]
         self.damage_shapefile = metadata["damage_shapefile"]
+        self.topological_analysis_finished = metadata.get("topological_analysis_finished")
+        self.betweeness_metric = metadata.get("betweeness_metric")
+        self.closeness_metric = metadata.get("closeness_metric")
+        self.bridges_metric = metadata.get("bridges_metric")
+
+        self.edges = gpd.GeoDataFrame(json.loads(metadata.get("edges")))
+        self.df_metrics = gpd.GeoDataFrame(json.loads(metadata.get("df_metrics")))
+        self.unique_pipe_materials_names = np.array(metadata.get("unique_pipe_materials_names"))
+        
+        self.topological_analysis_result_shapefile = metadata.get("topological_analysis_result_shapefile")
+        self.pipe_materials = metadata.get("pipe_materials")
         
         self.landing_page_frame.destroy()
         self.main_page()
@@ -200,6 +216,101 @@ class PipeReplacementTool:
             item = self.recent_scenarios.selection()[0]
             project_folder = self.recent_scenarios.item(item, "values")[0]
             self.open_scenario(project_folder)
+        except IndexError:
+            pass
+    
+    
+    def topological_metrics(self):
+        
+        def run_topological_analysis():
+            info_label.config(text="Running topological analysis...", fg=self.fg)
+            run_button.config(state=tk.DISABLED)
+            
+            # Refresh the window
+            window.update()
+            
+            closeness = closeness_slider.get()
+            betweeness = betweeness_slider.get()
+            bridges = bridges_slider.get()
+            
+            # Normalize the values
+            total = closeness + betweeness + bridges
+            if total == 0:
+                closeness, betweeness, bridges = 1/3, 1/3, 1/3
+            else:
+                closeness /= total            
+                betweeness /= total
+                bridges /= total
+            
+            self.closeness_metric = closeness
+            self.betweeness_metric = betweeness
+            self.bridges_metric = bridges
+            
+            output_path = self.project_folder
+            
+            gdf, G, nodes, edges, df_metrics = process_shapefile(self.network_shapefile, closeness, betweeness, bridges, output_path)
+            self.edges = edges
+            
+            plot_metrics(gdf, G, nodes, edges, ["closeness", "betweenness", "bridge", "composite"], 8, False, output_path)
+            output_path = os.path.join(output_path, "shp_with_metrics", "Pipes_WG_export_with_metrics.shp")
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            save_edge_gdf_shapefile(edges, output_path)
+            
+            self.topological_analysis_finished = True
+            self.df_metrics = df_metrics
+            self.unique_pipe_materials_names = df_metrics["MATERIAL"].unique()
+
+            for material_name in self.unique_pipe_materials_names:
+                self.pipe_materials[material_name] = self.const_pipe_materials.get(material_name)
+
+            self.topological_analysis_result_shapefile = output_path
+            
+            run_button.config(state=tk.NORMAL)
+            info_label.config(text="Topological analysis finished", fg=self.success_bg)
+
+        
+        window = tk.Toplevel(self.root)
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        # Center the window
+        window_width = self.screen_width // 3
+        window_height = self.screen_height // 2.5
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+                
+        closeness_label = tk.Label(window_frame, text="Closeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        closeness_label.grid(row=1, column=0, padx=5, pady=20)
+        closeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
+        closeness_slider.grid(row=1, column=1, padx=5, pady=20)
+        
+        betweeness_label = tk.Label(window_frame, text="Betweeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        betweeness_label.grid(row=0, column=0, padx=5, pady=20)
+        betweeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
+        betweeness_slider.grid(row=0, column=1, padx=5, pady=20)
+        
+        bridges_label = tk.Label(window_frame, text="Bridges metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        bridges_label.grid(row=2, column=0, padx=5, pady=20)
+        bridges_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
+        bridges_slider.grid(row=2, column=1, padx=5, pady=20)
+        
+        # Add the 'Run' button to the window
+        run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_topological_analysis)
+        run_button.grid(row=3, column=0, padx=5, pady=20, columnspan=2)
+        
+        # Info label
+        info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=2)
+        
+    
+    def handle_menu_click(self, event):
+        try:
+            item = self.menu_tree.selection()[0]
+            selected_item = self.menu_tree.item(item, "text")
+            if selected_item == "Risk assessment (topological metrics)":
+                self.topological_metrics()
         except IndexError:
             pass
 
@@ -223,7 +334,16 @@ class PipeReplacementTool:
             "project_name": self.project_name,
             "project_description": self.project_description,
             "network_shapefile": self.network_shapefile,
-            "damage_shapefile": self.damage_shapefile
+            "damage_shapefile": self.damage_shapefile,
+            "topological_analysis_finished": self.topological_analysis_finished,
+            "betweeness_metric": self.betweeness_metric,
+            "closeness_metric": self.closeness_metric,
+            "bridges_metric": self.bridges_metric,
+            "edges": self.edges.to_json(),
+            "df_metrics": self.df_metrics.to_json(),
+            "unique_pipe_materials_names": list(self.unique_pipe_materials_names),
+            "topological_analysis_result_shapefile": self.topological_analysis_result_shapefile,
+            "pipe_materials": self.pipe_materials
         }
         with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
             json.dump(scenario_info, f)
@@ -241,11 +361,21 @@ class PipeReplacementTool:
         self.project_description = None
         self.network_shapefile = None
         self.damage_shapefile = None
-        
-        self.network_shapefile_attributes = None
+        self.topological_analysis_finished = False
+        self.betweeness_metric = None
+        self.closeness_metric = None
+        self.bridges_metric = None
+        self.edges = None
+        self.df_metrics = None
+        self.unique_pipe_materials_names = None
+        self.topological_analysis_result_shapefile = None
+        self.pipe_materials = {}
         
         # Initialize all other class variables to None
+        self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
         self.recent_scenarios = None
+        self.network_shapefile_attributes = None
+        
         
         self.menuBar = tk.Menu(self.root)
         self.root.config(menu=self.menuBar)
@@ -293,7 +423,7 @@ class PipeReplacementTool:
         scenarios: List[Dict] = read_scenarios_config_file()
         if scenarios:
             self.recent_scenarios = ttk.Treeview(self.recent_scenarios_frame, columns=['project_folder', 'name', 'timestamp'], show="headings")
-            self.recent_scenarios.bind("<Double-1>", lambda recent_scenarios: self.tv_on_double_click(recent_scenarios))
+            self.recent_scenarios.bind("<Double-1>", lambda event: self.tv_on_double_click(event))
             
             self.recent_scenarios.heading('project_folder', text='Project Path', anchor='center')
             self.recent_scenarios.heading('name', text='Project Name', anchor='center')
@@ -361,10 +491,13 @@ class PipeReplacementTool:
             pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
             map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
 
-        tree = ttk.Treeview(left_frame, show="tree")
-        tree.column("#0", width=int(self.width * left_frame_width_mult))
-        tree.heading("#0", text="Setup")
-        tree.pack(expand=True, fill='both')
+        self.menu_tree = ttk.Treeview(left_frame, show="tree")
+        
+        self.menu_tree.bind("<Double-1>", lambda event: self.handle_menu_click(event))
+        
+        self.menu_tree.column("#0", width=int(self.width * left_frame_width_mult))
+        self.menu_tree.heading("#0", text="Setup")
+        self.menu_tree.pack(expand=True, fill='both')
         
         # Add vertical padding to Treeview items
         style = ttk.Style()
@@ -372,14 +505,14 @@ class PipeReplacementTool:
         style.configure("Treeview", font=(self.font, int(self.font_size // 2.5)))
 
         # Add items to Treeview
+        # Disable the ability to collapse or hide the children
         parent_nodes = {}
         for item in LEFT_MENU:
             if not item["leaf"]:
-                parent_node = tree.insert("", "end", text=item["name"], open=True)
+                parent_node = self.menu_tree.insert("", "end", text=item["name"], open=True)
                 parent_nodes[item["step"]] = parent_node
             else:
-                tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
-        
+                self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
         
         # Add the right frame widgets
         tk.Label(right_frame, text="     Selected Property     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
