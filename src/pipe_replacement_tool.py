@@ -2,6 +2,7 @@ from tkintermapview.canvas_path import CanvasPath
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
+from PIL import ImageTk, Image
 from shapely.geometry import Point
 from src.map_utils import *
 from copy import deepcopy
@@ -19,6 +20,7 @@ import warnings
 from typing import List
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 
 
 class PipeReplacementTool:
@@ -48,6 +50,7 @@ class PipeReplacementTool:
         self.root = tk.Tk()
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
         
         # Let's find the width and height of the screen
         
@@ -69,6 +72,11 @@ class PipeReplacementTool:
 
         # Images section
         self.logo_image = tk.PhotoImage(file='./src/img/logo.png')
+
+
+    def on_app_closing(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.root.destroy()
 
 
     def new_scenario(self) -> None:
@@ -199,13 +207,12 @@ class PipeReplacementTool:
         self.betweeness_metric = metadata.get("betweeness_metric")
         self.closeness_metric = metadata.get("closeness_metric")
         self.bridges_metric = metadata.get("bridges_metric")
-
-        self.edges = gpd.GeoDataFrame(json.loads(metadata.get("edges")))
-        self.df_metrics = gpd.GeoDataFrame(json.loads(metadata.get("df_metrics")))
         self.unique_pipe_materials_names = np.array(metadata.get("unique_pipe_materials_names"))
-        
         self.topological_analysis_result_shapefile = metadata.get("topological_analysis_result_shapefile")
         self.pipe_materials = metadata.get("pipe_materials")
+        
+        self.edges = gpd.read_file(os.path.join(self.project_folder, metadata["edges"]))
+        self.df_metrics = pd.read_csv(os.path.join(self.project_folder, metadata["df_metrics"]))
         
         self.landing_page_frame.destroy()
         self.main_page()
@@ -222,12 +229,12 @@ class PipeReplacementTool:
     
     def topological_metrics(self):
         
+        
         def run_topological_analysis():
             info_label.config(text="Running topological analysis...", fg=self.fg)
             run_button.config(state=tk.DISABLED)
             
-            # Refresh the window
-            window.update()
+            window.update()  # Refresh the window
             
             closeness = closeness_slider.get()
             betweeness = betweeness_slider.get()
@@ -282,14 +289,14 @@ class PipeReplacementTool:
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
                 
         closeness_label = tk.Label(window_frame, text="Closeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        closeness_label.grid(row=1, column=0, padx=5, pady=20)
+        closeness_label.grid(row=0, column=0, padx=5, pady=20)
         closeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
-        closeness_slider.grid(row=1, column=1, padx=5, pady=20)
+        closeness_slider.grid(row=0, column=1, padx=5, pady=20)
         
         betweeness_label = tk.Label(window_frame, text="Betweeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        betweeness_label.grid(row=0, column=0, padx=5, pady=20)
+        betweeness_label.grid(row=1, column=0, padx=5, pady=20)
         betweeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
-        betweeness_slider.grid(row=0, column=1, padx=5, pady=20)
+        betweeness_slider.grid(row=1, column=1, padx=5, pady=20)
         
         bridges_label = tk.Label(window_frame, text="Bridges metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         bridges_label.grid(row=2, column=0, padx=5, pady=20)
@@ -305,12 +312,121 @@ class PipeReplacementTool:
         info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=2)
         
     
+    def combined_metrics(self):
+        
+        def run_combined_analysis():
+            
+            def next_image():
+                nonlocal count
+                count += 1
+                if count >= len(all_images):
+                    count = 0
+                img_label.config(image=all_images[count])
+                img_label.image = all_images[count]
+            
+            
+            def previous_image():
+                nonlocal count
+                count -= 1
+                if count < 0:
+                    count = len(all_images) - 1
+                img_label.config(image=all_images[count])
+                img_label.image = all_images[count]
+                
+
+            info_label.config(text="Running combined analysis...", fg=self.fg)
+            run_button.config(state=tk.DISABLED)            
+            window.update()
+            
+            combined_metric_failures = combined_metric_failures_slider.get()
+            
+            self.cell_lower_bound = cell_lower_bound_slider.get()
+            self.cell_upper_bound = cell_upper_bound_slider.get()
+            
+            self.combined_metric_weight = 1 - combined_metric_failures
+            self.failures_weight = combined_metric_failures
+            
+            bounds = (self.cell_lower_bound, self.cell_upper_bound)
+            os.makedirs(os.path.join(self.project_folder, "Fishnet_Grids"), exist_ok=True)
+            
+            self.step2_output_path = os.path.join(self.project_folder, "Fishnet_Grids", "")
+            results, best_square_size = spatial_autocorrelation_analysis(pipe_shapefile_path=self.topological_analysis_result_shapefile, failures_shapefile_path=self.damage_shapefile, lower_bound_cell=self.cell_lower_bound, upper_bound_cell=self.cell_upper_bound, weight_avg_combined_metric=self.combined_metric_weight, weight_failures=self.failures_weight, output_path=self.step2_output_path)
+        
+            info_label.config(text=f"The best square is {best_square_size}. You can change it if you want before proceeding", fg=self.success_bg)
+            run_button.config(state=tk.NORMAL)
+            window.update()
+            
+            # Find all files in the Fishnet_Grids folder that are .png files
+            files = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png")]            
+            files = sorted(files, key=lambda x: int(x.split("_")[0]))
+            
+            all_images = []            
+
+            for file in files:
+                img = Image.open(os.path.join(self.step2_output_path, file))
+                img_resized = img.resize((300, 300))
+                photo_image = ImageTk.PhotoImage(img_resized)
+                all_images.append(photo_image)
+            
+            count = 0
+                        
+            previous_button = tk.Button(window_frame, text="Previous", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=previous_image)
+            previous_button.grid(row=5, column=0, padx=5, pady=10)
+
+            img_label = tk.Label(window_frame, image=all_images[0])
+            img_label.image = all_images[count]
+            img_label.grid(row=5, column=1, pady=10)
+
+            next_button = tk.Button(window_frame, text="Next", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=next_image)
+            next_button.grid(row=5, column=2, pady=10)
+        
+        
+        window = tk.Toplevel(self.root)
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        # Center the window
+        window_width = self.screen_width // 1.5
+        window_height = self.screen_height // 1.5
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+                
+        combined_metric_failures_label_1 = tk.Label(window_frame, text="Weighted average combined metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        combined_metric_failures_label_1.grid(row=0, column=0, padx=5, pady=20)
+        combined_metric_failures_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=0.01)
+        combined_metric_failures_slider.grid(row=0, column=1, padx=5, pady=20)
+        combined_metric_failures_label_2 = tk.Label(window_frame, text="Failures weight", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        combined_metric_failures_label_2.grid(row=0, column=2, padx=5, pady=20)
+        
+        cell_lower_bound_label = tk.Label(window_frame, text="Cell lower bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_lower_bound_label.grid(row=1, column=0, padx=5, pady=20)
+        cell_lower_bound_slider = tk.Scale(window_frame, from_=100, to=1000, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
+        cell_lower_bound_slider.grid(row=1, column=1, padx=5, pady=20)
+        
+        cell_upper_bound_label = tk.Label(window_frame, text="Cell upper bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_upper_bound_label.grid(row=2, column=0, padx=5, pady=20)
+        cell_upper_bound_slider = tk.Scale(window_frame, from_=200, to=1000, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
+        cell_upper_bound_slider.grid(row=2, column=1, padx=5, pady=20)
+        
+        # Add the 'Run' button to the window
+        run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_combined_analysis)
+        run_button.grid(row=3, column=1, padx=5, pady=20)
+        
+        # Info label
+        info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        info_label.grid(row=4, column=1, padx=5, pady=20)
+            
+    
     def handle_menu_click(self, event):
         try:
             item = self.menu_tree.selection()[0]
             selected_item = self.menu_tree.item(item, "text")
             if selected_item == "Risk assessment (topological metrics)":
                 self.topological_metrics()
+            if selected_item == "Risk assessment (Combined metrics/damages)":
+                self.combined_metrics()
         except IndexError:
             pass
 
@@ -336,17 +452,20 @@ class PipeReplacementTool:
             "network_shapefile": self.network_shapefile,
             "damage_shapefile": self.damage_shapefile,
             "topological_analysis_finished": self.topological_analysis_finished,
-            "betweeness_metric": self.betweeness_metric,
             "closeness_metric": self.closeness_metric,
+            "betweeness_metric": self.betweeness_metric,
             "bridges_metric": self.bridges_metric,
-            "edges": self.edges.to_json(),
-            "df_metrics": self.df_metrics.to_json(),
+            "edges": "edges.gpkg",
+            "df_metrics": "df_metrics.csv",
             "unique_pipe_materials_names": list(self.unique_pipe_materials_names),
             "topological_analysis_result_shapefile": self.topological_analysis_result_shapefile,
             "pipe_materials": self.pipe_materials
         }
         with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
             json.dump(scenario_info, f)
+        
+        # Save the geodataframe as files
+        self.edges.to_file(os.path.join(self.project_folder, scenario_info['edges']), driver='GPKG')
         
         messagebox.showinfo("Success", "Scenario saved successfully")
     
@@ -362,14 +481,20 @@ class PipeReplacementTool:
         self.network_shapefile = None
         self.damage_shapefile = None
         self.topological_analysis_finished = False
-        self.betweeness_metric = None
         self.closeness_metric = None
+        self.betweeness_metric = None
         self.bridges_metric = None
         self.edges = None
         self.df_metrics = None
         self.unique_pipe_materials_names = None
         self.topological_analysis_result_shapefile = None
         self.pipe_materials = {}
+        
+        self.step2_output_path = None
+        self.cell_lower_bound = None
+        self.cell_upper_bound = None
+        self.combined_metric_weight = None
+        self.failures_weight = None
         
         # Initialize all other class variables to None
         self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
@@ -515,7 +640,11 @@ class PipeReplacementTool:
                 self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
         
         # Add the right frame widgets
-        tk.Label(right_frame, text="     Selected Property     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        tk.Label(right_frame, text="     Scenario Properties     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        
+        if self.closeness_metric: tk.Label(right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.betweeness_metric: tk.Label(right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.bridges_metric: tk.Label(right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         # Add the bottom frame widgets
         tk.Label(bottom_frame, text="Message Window", fg=self.fg, bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=30)
