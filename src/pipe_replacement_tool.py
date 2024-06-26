@@ -24,7 +24,7 @@ import pandas as pd
 
 
 class PipeReplacementTool:
-    def initial_configurations(self):        
+    def initial_configurations(self) -> None:
         self.font = "Sans"
         self.font_size = 18
         
@@ -74,6 +74,65 @@ class PipeReplacementTool:
         self.logo_image = tk.PhotoImage(file='./src/img/logo.png')
 
 
+    def __init__(self) -> None:
+        
+        self.initial_configurations()
+        
+        # Initialize all class variables related to the metadata.json file to None
+        self.project_folder = None
+        self.project_name = None
+        self.project_description = None
+        self.network_shapefile = None
+        self.damage_shapefile = None
+        
+        self.topological_analysis_finished = False
+        self.closeness_metric = None
+        self.betweeness_metric = None
+        self.bridges_metric = None
+        self.edges = None
+        self.df_metrics = None
+        self.unique_pipe_materials_names = None
+        self.topological_analysis_result_shapefile = None
+        self.pipe_materials = {}
+        
+        self.step2_output_path = None
+        self.best_square_size = None
+        self.cell_lower_bound = None
+        self.cell_upper_bound = None
+        self.combined_metric_weight = None
+        self.failures_weight = None
+        self.step2_finished = False
+        
+        self.select_square_size = None
+        self.sorted_fishnet_df = None
+        self.results_pipe_clusters = None
+        self.fishnet_index = None
+        self.path_fishnet = None
+        self.step2b_finished = False
+        
+        # Initialize all other class variables to None
+        self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
+        self.recent_scenarios = None
+        self.network_shapefile_attributes = None
+        
+        
+        self.menuBar = tk.Menu(self.root)
+        self.root.config(menu=self.menuBar)
+        self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
+        
+        # Add a Help menu which opens a messagebox with information about the application
+        self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
+        self.helpMenu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Pipe Replacement Tool\nVersion 1.0\nDeveloped by: UWMH"))
+        
+        self.fileMenu.add_command(label="New", command=self.new_scenario)
+        self.fileMenu.add_command(label="Open", command=self.open_scenario)
+
+        self.landing_page()
+        self.root.mainloop()
+
+
     def close_app(self):
         self.save_scenario()
         self.root.destroy()
@@ -84,6 +143,15 @@ class PipeReplacementTool:
     def on_app_closing(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.close_app()
+
+
+    def tv_on_double_click(self, event):
+        try:
+            item = self.recent_scenarios.selection()[0]
+            project_folder = self.recent_scenarios.item(item, "values")[0]
+            self.open_scenario(project_folder)
+        except IndexError:
+            pass
 
 
     def new_scenario(self) -> None:
@@ -229,19 +297,412 @@ class PipeReplacementTool:
         self.failures_weight = metadata.get("failures_weight")
         self.step2_finished = metadata.get("step2_finished")
         
+        self.select_square_size = metadata.get("select_square_size")
+        self.sorted_fishnet_df = pd.read_csv(os.path.join(self.project_folder, metadata["sorted_fishnet_df"])) if metadata.get("sorted_fishnet_df") else None
+        self.results_pipe_clusters = metadata.get("results_pipe_clusters")
+        self.fishnet_index = pd.read_csv(os.path.join(self.project_folder, metadata["fishnet_index"])) if metadata.get("fishnet_index") else None
+        self.path_fishnet = metadata.get("path_fishnet")
+        self.step2b_finished = metadata.get("step2b_finished")
+        
         self.landing_page_frame.destroy()
         self.main_page()
     
 
-    def tv_on_double_click(self, event):
+    def save_scenario(self):
+        if not self.project_folder:
+            messagebox.showerror("Error", "No scenario to save")
+            return
+        
+        # Save the scenario information to a json file
+        scenario_info = {
+            "project_folder": self.project_folder,
+            "project_name": self.project_name,
+            "project_description": self.project_description,
+            "network_shapefile": self.network_shapefile,
+            "damage_shapefile": self.damage_shapefile,
+            "topological_analysis_finished": self.topological_analysis_finished,
+            "closeness_metric": self.closeness_metric,
+            "betweeness_metric": self.betweeness_metric,
+            "bridges_metric": self.bridges_metric,
+            "edges": "edges.gpkg" if self.topological_analysis_finished else None,
+            "df_metrics": "df_metrics.csv" if self.topological_analysis_finished else None,
+            "unique_pipe_materials_names": list(self.unique_pipe_materials_names),
+            "topological_analysis_result_shapefile": self.topological_analysis_result_shapefile,
+            "pipe_materials": self.pipe_materials,
+            "step2_output_path": self.step2_output_path,
+            "best_square_size": self.best_square_size,
+            "cell_lower_bound": self.cell_lower_bound,
+            "cell_upper_bound": self.cell_upper_bound,
+            "combined_metric_weight": self.combined_metric_weight,
+            "failures_weight": self.failures_weight,
+            "step2_finished": self.step2_finished,
+            "select_square_size": self.select_square_size,
+            "sorted_fishnet_df": "sorted_fishnet_df.csv" if self.step2b_finished else None,
+            "results_pipe_clusters": self.results_pipe_clusters,
+            "fishnet_index": "fishnet_index.csv" if self.step2b_finished else None,
+            "path_fishnet": self.path_fishnet,
+            "step2b_finished": self.step2b_finished
+        }
+        with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
+            json.dump(scenario_info, f)
+        
+        # Save the geodataframe as files
+        if self.topological_analysis_finished:
+            self.edges.to_file(os.path.join(self.project_folder, scenario_info['edges']), driver='GPKG')
+        
+        # Save the fishnet dataframe as a csv file
+        if self.step2b_finished:
+            self.sorted_fishnet_df.to_csv(os.path.join(self.project_folder, scenario_info['sorted_fishnet_df']), index=False)                
+            self.fishnet_index.to_csv(os.path.join(self.project_folder, scenario_info['fishnet_index']), index=False)
+        
+        messagebox.showinfo("Success", "Scenario saved successfully")
+
+
+    def handle_menu_click(self, event):
         try:
-            item = self.recent_scenarios.selection()[0]
-            project_folder = self.recent_scenarios.item(item, "values")[0]
-            self.open_scenario(project_folder)
+            item = self.menu_tree.selection()[0]
+            selected_item = self.menu_tree.item(item, "text")
+            
+            if selected_item == "Pipe network":
+                self.update_middle_frame('network')
+            
+            if selected_item == "Damages":
+                self.update_middle_frame('damages')
+            
+            if selected_item == "Risk assessment (topological metrics)":
+                if not self.step2_finished:
+                    self.topological_metrics()
+                else:
+                    messagebox.showerror("Error", "You have already run the topological analysis")
+            
+            if selected_item == "Betweeness metric" and self.betweeness_metric:
+                self.update_middle_frame('betweeness', os.path.join(self.project_folder, "bc_map.png"))
+            if selected_item == "Closeness metric" and self.closeness_metric:
+                self.update_middle_frame('closeness', os.path.join(self.project_folder, "cc_map.png"))
+            if selected_item == "Bridges metric" and self.bridges_metric:
+                self.update_middle_frame('bridges', os.path.join(self.project_folder, "bridge_map.png"))
+            if selected_item == "Composite metric" and self.betweeness_metric:
+                self.update_middle_frame('composite', os.path.join(self.project_folder, "cm_map.png"))
+            
+            if selected_item == "Risk assessment (Combined metrics/damages)":
+                if not self.topological_analysis_finished:
+                    messagebox.showerror("Error", "You need to run the topological analysis first")
+                    return
+                if self.step2b_finished:
+                    messagebox.showerror("Error", "You have already run the risk assessment")
+                    return
+                
+                self.combined_metrics()
+                
+            if selected_item == "Criticality maps per cell size" and self.step2_finished:
+                self.update_middle_frame('criticality_maps_per_cell_size')
+            
+            if selected_item == "LISA results" and self.step2_finished:
+                self.update_middle_frame('lisa', os.path.join(self.step2_output_path, "square_size_comparison_diagram.png"))
+            
+            if selected_item == "Risk assessment (Optimal / Selected cell size)" and self.step2_finished:
+                self.selected_cell_size()
+            
+            if selected_item == 'Criticality map for selected cell size' and self.step2b_finished:
+                img_path = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png") and 'lisa' in f][0]
+                self.update_middle_frame('criticality_map_selected_cell_size', os.path.join(self.step2_output_path, img_path))
+            
         except IndexError:
             pass
     
+
+    def handle_pipe_line_click(self, canvas_path: CanvasPath):
+        pipe_index = int(canvas_path.name)
+        pipe_id = self.network_shapefile_attributes['ID'][pipe_index]
+        pipe_label = self.network_shapefile_attributes['LABEL'][pipe_index]
+        pipe_material = self.network_shapefile_attributes['MATERIAL'][pipe_index]
+        messagebox.showinfo(f"Pipe with ID={pipe_id} clicked", f"Pipe Label: {pipe_label}\nPipe Material: {pipe_material}")
+      
+
+    def handle_marker_click(self, marker):
+        for i, row in self.damages_shapefile_attributes.iterrows():
+            if row['KOD_VLAVIS'] == marker.data:
+                damage_id = int(self.damages_shapefile_attributes['KOD_VLAVIS'][i])
+                damage_date = self.damages_shapefile_attributes['DATE_EIDOP'][i]
+                damage_desc = self.damages_shapefile_attributes['PERIGRAF__'][i]
+                messagebox.showinfo(f"Damage with ID={damage_id}", f"Reported at: {damage_date}\n\nDescription: {damage_desc}")
+                break
+
+
+    def landing_page(self):
+        self.landing_page_frame = tk.Frame(self.root, bg=self.bg)
+        self.landing_page_frame.pack(expand=True, fill='both')
+        
+        self.top_logo_frame = tk.Frame(self.landing_page_frame, bg=self.blue_bg, width=self.width, height=170)
+        self.top_logo_frame.pack()
+        self.top_logo_frame.grid_propagate(False)
+        
+        self.logo_label = tk.Label(self.top_logo_frame, text="   Welcome to Pipe Replacement Tool", bg="#1d2b59", fg="#ffffff", font=(self.font, self.font_size), image=self.logo_image, compound='left')
+        self.logo_label.grid(row=0, column=0)
+        
+        self.scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=200, pady=20)
+        self.scenarios_frame.pack()
+        self.scenarios_frame.grid_propagate(False)
+        
+        tk.Label(self.scenarios_frame, text="Create a new scenario or manage existing", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+        tk.Button(self.scenarios_frame, text="Create New Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.5)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=10, pady=10)
+        tk.Button(self.scenarios_frame, text="Open scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.5)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=10, pady=10)
+        
+        self.recent_scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=300)
+        self.recent_scenarios_frame.pack()
+        self.recent_scenarios_frame.grid_propagate(False)
+        
+        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10)
+        
+        # Display a datatable with the recent scenarios
+        scenarios: List[Dict] = read_scenarios_config_file()
+        if scenarios:
+            self.recent_scenarios = ttk.Treeview(self.recent_scenarios_frame, columns=['project_folder', 'name', 'timestamp'], show="headings")
+            self.recent_scenarios.bind("<Double-1>", lambda event: self.tv_on_double_click(event))
+            
+            self.recent_scenarios.heading('project_folder', text='Project Path', anchor='center')
+            self.recent_scenarios.heading('name', text='Project Name', anchor='center')
+            self.recent_scenarios.heading('timestamp', text='Timestamp', anchor='center')
+            self.recent_scenarios.grid(row=1, column=0, padx=10, pady=10)
+            self.recent_scenarios.column('project_folder', width=int(self.width * 0.25), anchor='center')
+            self.recent_scenarios.column('name', width=int(self.width * 0.25), anchor='center')
+            self.recent_scenarios.column('timestamp', width=int(self.width * 0.25), anchor='center')
+            
+            for scenario in scenarios:
+                self.recent_scenarios.insert('', 'end', values=(scenario["project_folder"], scenario["name"], time.ctime(scenario["timestamp"])))
+        else:
+            tk.Label(self.recent_scenarios_frame, text="No recent scenarios available", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size/2))).grid(row=1, column=0, padx=10, pady=10)
     
+    
+    def main_page(self):
+        self.network_bounding_box, self.network_shp_centroid, self.network_pipes_lines_paths, self.network_shapefile_attributes = extract_network_shapefile_data(self.network_shapefile)
+        self.damages_bounding_box, self._damages_bbox_centroid, self.damages_points, self.damages_shapefile_attributes = extract_damages_shapefile_data(self.damage_shapefile)
+        
+        # Add the 'Save' button to the menu bar above the Exit button
+        self.fileMenu.add_command(label="Save", command=self.save_scenario)
+        # self.fileMenu.add_command(label="Save as...")
+        self.fileMenu.add_separator()
+        self.fileMenu.add_command(label="Exit", command=self.close_app)
+        
+        top_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15))
+        top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
+        
+        # Insert the project name and description
+        label_text = f"{self.project_name}\n{self.project_description}"
+        tk.Label(top_frame, text=label_text, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size / 1.7)), padx=10, pady=10).pack(expand=True, fill='both')
+    
+        # Create and place the frames
+        self.top_height = int(self.height * 0.7)
+        
+        left_frame_width_mult = 0.2
+        self.map_width_multiplier = 0.6
+        right_frame_width_mult = 1 - left_frame_width_mult - self.map_width_multiplier
+
+        left_frame = tk.Frame(self.root, width=int(self.width * left_frame_width_mult), height=self.top_height)
+        left_frame.grid(row=1, column=0, sticky="nsew")
+
+        self.middle_frame = tk.Frame(self.root, width=int(self.width * self.map_width_multiplier), height=self.top_height, bg=self.bg, border=1, borderwidth=1, relief="solid")
+        self.middle_frame.grid(row=1, column=1, sticky="nsew")
+        
+        self.update_middle_frame('network')
+
+        self.right_frame = tk.Frame(self.root, width=int(self.width *right_frame_width_mult), height=self.top_height, bg=self.white, border=1, borderwidth=1, relief="solid")
+        self.right_frame.grid(row=1, column=2, sticky="nsew")
+        self.update_right_frame()
+
+        bottom_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15), bg=self.bg)
+        bottom_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
+
+        # Configure grid weights to allow expansion
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_columnconfigure(2, weight=1)
+        self.root.grid_rowconfigure(0, weight=0)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_rowconfigure(2, weight=0)
+        
+        self.menu_tree = ttk.Treeview(left_frame, show="tree")
+        
+        self.menu_tree.bind("<Double-1>", lambda event: self.handle_menu_click(event))
+        
+        self.menu_tree.column("#0", width=int(self.width * left_frame_width_mult))
+        self.menu_tree.heading("#0", text="Setup")
+        self.menu_tree.pack(expand=True, fill='both')
+        
+        # Add vertical padding to Treeview items
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=35)  # Adjust rowheight as needed
+        style.configure("Treeview", font=(self.font, int(self.font_size // 2.5)))
+
+        # Add items to Treeview
+        # Disable the ability to collapse or hide the children
+        parent_nodes = {}
+        for item in LEFT_MENU:
+            if not item["leaf"]:
+                parent_node = self.menu_tree.insert("", "end", text=item["name"], open=True)
+                parent_nodes[item["step"]] = parent_node
+            else:
+                self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
+        
+        # Add the bottom frame widgets
+        tk.Label(bottom_frame, text="Message Window", fg=self.fg, bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=30)
+
+    
+    def update_right_frame(self):
+        # Clear the right frame
+        for widget in self.right_frame.winfo_children():
+            widget.destroy()
+        
+        # Add the right frame widgets
+        tk.Label(self.right_frame, text="     Scenario Properties     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        
+        if self.closeness_metric: tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.betweeness_metric: tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.bridges_metric: tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.cell_lower_bound: tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.combined_metric_weight: tk.Label(self.right_frame, text=f"Combined metric weight: {self.combined_metric_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.select_square_size: tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+
+
+    def update_middle_frame(self, display_type: str, *args):
+        # Clear the middle frame
+        for widget in self.middle_frame.winfo_children():
+            widget.destroy()
+        
+        if display_type == 'network':
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
+            map_widget.pack(expand=True, fill='both', padx=50, pady=50)
+            
+            map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
+                    
+            for index, line_path in enumerate(self.network_pipes_lines_paths):
+                pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
+                map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
+        
+        if display_type == 'damages':
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
+            map_widget.pack(expand=True, fill='both', padx=50, pady=50)
+            
+            map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
+            
+            print(self.damages_shapefile_attributes)
+            
+            for index, point in enumerate(self.damages_points):
+                map_widget.set_marker(point[0], point[1], data=int(self.damages_shapefile_attributes['KOD_VLAVIS'][index]), command=self.handle_marker_click)
+        
+        if display_type == 'betweeness':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+        
+        if display_type == 'closeness':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+        
+        if display_type == 'bridges':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+        
+        if display_type == 'composite':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+        
+        if display_type == 'lisa':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 480))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+        
+        if display_type == 'criticality_maps_per_cell_size':
+            self.criticality_maps_per_cell_size()
+
+        if display_type == 'criticality_map_selected_cell_size':
+            img = Image.open(args[0])
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            
+            img_label = tk.Label(self.middle_frame, image=photo_image)
+            img_label.image = photo_image
+            img_label.pack(expand=True, fill='both')
+
+
+    def criticality_maps_per_cell_size(self):
+        
+        
+        def next_image():
+            nonlocal count
+            count += 1
+            if count >= len(all_images):
+                count = 0
+            img_label.config(image=all_images[count])
+            img_label.image = all_images[count]
+        
+        
+        def previous_image():
+            nonlocal count
+            count -= 1
+            if count < 0:
+                count = len(all_images) - 1
+            img_label.config(image=all_images[count])
+            img_label.image = all_images[count]
+        
+        
+        # Find all files in the Fishnet_Grids folder that are .png files
+        files = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png") and 'lisa' not in f]
+        files = sorted(files, key=lambda x: int(x.split("_")[0]))
+        
+        all_images = []            
+
+        cell_boundaries = [str(cell_size) for cell_size in range(self.cell_lower_bound, self.cell_upper_bound + 1, 100)]
+
+        for file in files:
+
+            if not any(cell_boundary in file for cell_boundary in cell_boundaries):
+                continue
+            
+            img = Image.open(os.path.join(self.step2_output_path, file))
+            img_resized = img.resize((800, 800))
+            photo_image = ImageTk.PhotoImage(img_resized)
+            all_images.append(photo_image)
+        
+        count = 0
+        
+        img_label = tk.Label(self.middle_frame, image=all_images[0])
+        img_label.image = all_images[count]
+        img_label.pack()             
+
+        previous_button = tk.Button(self.middle_frame, text="Previous", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=previous_image)
+        next_button = tk.Button(self.middle_frame, text="Next", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=next_image)
+        
+        # DIsplay the two buttons next to each other
+        previous_button.pack(side=tk.LEFT, padx=10, pady=10)
+        next_button.pack(side=tk.RIGHT, padx=10, pady=10)
+        
+
     def topological_metrics(self):
         
         
@@ -328,8 +789,8 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=2)
-        
-    
+
+
     def combined_metrics(self):
         
         
@@ -396,376 +857,6 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=4, column=1, padx=5, pady=20)
-            
-    
-    def handle_menu_click(self, event):
-        try:
-            item = self.menu_tree.selection()[0]
-            selected_item = self.menu_tree.item(item, "text")
-            if selected_item == "Risk assessment (topological metrics)":
-                if not self.step2_finished:
-                    self.topological_metrics()
-                else:
-                    messagebox.showerror("Error", "You have already run the topological analysis")
-            
-            if selected_item == "Betweeness metric" and self.betweeness_metric:
-                self.open_map_popup(os.path.join(self.project_folder, "bc_map.png"), "Betweeness Centrality Map")
-            if selected_item == "Closeness metric" and self.closeness_metric:
-                self.open_map_popup(os.path.join(self.project_folder, "cc_map.png"), "Closeness Centrality Map")
-            if selected_item == "Bridges metric" and self.bridges_metric:
-                self.open_map_popup(os.path.join(self.project_folder, "bridge_map.png"), "Bridges Map")
-            if selected_item == "Composite metric" and self.betweeness_metric:
-                self.open_map_popup(os.path.join(self.project_folder, "cm_map.png"), "Composite Map")
-            
-            if selected_item == "Risk assessment (Combined metrics/damages)":
-                if self.topological_analysis_finished: 
-                    self.combined_metrics()
-                else: 
-                    messagebox.showerror("Error", "Please run the topological analysis first")
-                
-            if selected_item == "Criticality maps per cell size" and self.step2_finished:
-                self.criticality_maps_per_cell_size()
-            if selected_item == "LISA results" and self.step2_finished:
-                self.open_map_popup(os.path.join(self.step2_output_path, "square_size_comparison_diagram.png"), "LISA Results", 1000, 600)
-            
-            if selected_item == "Risk assessment (Optimal / Selected cell size)" and self.step2_finished:
-                self.selected_cell_size()
-            
-        except IndexError:
-            pass
-
-    
-    def handle_pipe_line_click(self, canvas_path: CanvasPath):
-        pipe_index = int(canvas_path.name)
-        pipe_id = self.network_shapefile_attributes['ID'][pipe_index]
-        pipe_label = self.network_shapefile_attributes['LABEL'][pipe_index]
-        pipe_material = self.network_shapefile_attributes['MATERIAL'][pipe_index]
-        messagebox.showinfo(f"Pipe with ID={pipe_id} clicked", f"Pipe Label: {pipe_label}\nPipe Material: {pipe_material}")
-    
-    
-    def save_scenario(self):
-        if not self.project_folder:
-            messagebox.showerror("Error", "No scenario to save")
-            return
-        
-        # Save the scenario information to a json file
-        scenario_info = {
-            "project_folder": self.project_folder,
-            "project_name": self.project_name,
-            "project_description": self.project_description,
-            "network_shapefile": self.network_shapefile,
-            "damage_shapefile": self.damage_shapefile,
-            "topological_analysis_finished": self.topological_analysis_finished,
-            "closeness_metric": self.closeness_metric,
-            "betweeness_metric": self.betweeness_metric,
-            "bridges_metric": self.bridges_metric,
-            "edges": "edges.gpkg",
-            "df_metrics": "df_metrics.csv",
-            "unique_pipe_materials_names": list(self.unique_pipe_materials_names),
-            "topological_analysis_result_shapefile": self.topological_analysis_result_shapefile,
-            "pipe_materials": self.pipe_materials,
-            "step2_output_path": self.step2_output_path,
-            "best_square_size": self.best_square_size,
-            "cell_lower_bound": self.cell_lower_bound,
-            "cell_upper_bound": self.cell_upper_bound,
-            "combined_metric_weight": self.combined_metric_weight,
-            "failures_weight": self.failures_weight,
-            "step2_finished": self.step2_finished
-        }
-        with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
-            json.dump(scenario_info, f)
-        
-        # Save the geodataframe as files
-        self.edges.to_file(os.path.join(self.project_folder, scenario_info['edges']), driver='GPKG')
-        
-        messagebox.showinfo("Success", "Scenario saved successfully")
-    
-
-    def __init__(self) -> None:
-        
-        self.initial_configurations()
-        
-        # Initialize all class variables related to the metadata.json file to None
-        self.project_folder = None
-        self.project_name = None
-        self.project_description = None
-        self.network_shapefile = None
-        self.damage_shapefile = None
-        self.topological_analysis_finished = False
-        self.closeness_metric = None
-        self.betweeness_metric = None
-        self.bridges_metric = None
-        self.edges = None
-        self.df_metrics = None
-        self.unique_pipe_materials_names = None
-        self.topological_analysis_result_shapefile = None
-        self.pipe_materials = {}
-        
-        self.step2_output_path = None
-        self.best_square_size = None
-        self.cell_lower_bound = None
-        self.cell_upper_bound = None
-        self.combined_metric_weight = None
-        self.failures_weight = None
-        self.step2_finished = False
-        self.select_square_size = None
-        self.sorted_fishnet_df = None
-        self.results_pipe_clusters = None
-        self.fishnet_index = None
-        self.path_fishnet = None
-        self.step2b_finished = False
-        
-        # Initialize all other class variables to None
-        self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
-        self.recent_scenarios = None
-        self.network_shapefile_attributes = None
-        
-        
-        self.menuBar = tk.Menu(self.root)
-        self.root.config(menu=self.menuBar)
-        self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
-        
-        # Add a Help menu which opens a messagebox with information about the application
-        self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
-        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
-        self.helpMenu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Pipe Replacement Tool\nVersion 1.0\nDeveloped by: UWMH"))
-        
-        self.fileMenu.add_command(label="New", command=self.new_scenario)
-        self.fileMenu.add_command(label="Open", command=self.open_scenario)
-
-        self.landing_page()
-        self.root.mainloop()
-        
-
-    def landing_page(self):
-        self.landing_page_frame = tk.Frame(self.root, bg=self.bg)
-        self.landing_page_frame.pack(expand=True, fill='both')
-        
-        self.top_logo_frame = tk.Frame(self.landing_page_frame, bg=self.blue_bg, width=self.width, height=170)
-        self.top_logo_frame.pack()
-        self.top_logo_frame.grid_propagate(False)
-        
-        self.logo_label = tk.Label(self.top_logo_frame, text="   Welcome to Pipe Replacement Tool", bg="#1d2b59", fg="#ffffff", font=(self.font, self.font_size), image=self.logo_image, compound='left')
-        self.logo_label.grid(row=0, column=0)
-        
-        self.scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=200, pady=20)
-        self.scenarios_frame.pack()
-        self.scenarios_frame.grid_propagate(False)
-        
-        tk.Label(self.scenarios_frame, text="Create a new scenario or manage existing", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, columnspan=3, padx=10, pady=10)
-        tk.Button(self.scenarios_frame, text="Create New Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.5)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=10, pady=10)
-        tk.Button(self.scenarios_frame, text="Open scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.5)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=10, pady=10)
-        
-        self.recent_scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=300)
-        self.recent_scenarios_frame.pack()
-        self.recent_scenarios_frame.grid_propagate(False)
-        
-        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10)
-        
-        # Display a datatable with the recent scenarios
-        scenarios: List[Dict] = read_scenarios_config_file()
-        if scenarios:
-            self.recent_scenarios = ttk.Treeview(self.recent_scenarios_frame, columns=['project_folder', 'name', 'timestamp'], show="headings")
-            self.recent_scenarios.bind("<Double-1>", lambda event: self.tv_on_double_click(event))
-            
-            self.recent_scenarios.heading('project_folder', text='Project Path', anchor='center')
-            self.recent_scenarios.heading('name', text='Project Name', anchor='center')
-            self.recent_scenarios.heading('timestamp', text='Timestamp', anchor='center')
-            self.recent_scenarios.grid(row=1, column=0, padx=10, pady=10)
-            self.recent_scenarios.column('project_folder', width=int(self.width * 0.25), anchor='center')
-            self.recent_scenarios.column('name', width=int(self.width * 0.25), anchor='center')
-            self.recent_scenarios.column('timestamp', width=int(self.width * 0.25), anchor='center')
-            
-            for scenario in scenarios:
-                self.recent_scenarios.insert('', 'end', values=(scenario["project_folder"], scenario["name"], time.ctime(scenario["timestamp"])))
-        else:
-            tk.Label(self.recent_scenarios_frame, text="No recent scenarios available", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size/2))).grid(row=1, column=0, padx=10, pady=10)
-    
-    
-    def main_page(self):
-        bounding_box, network_shp_centroid, pipes_lines_paths, self.network_shapefile_attributes = extract_shapefile_data(self.network_shapefile)
-        
-        # Add the 'Save' button to the menu bar above the Exit button
-        self.fileMenu.add_command(label="Save", command=self.save_scenario)
-        # self.fileMenu.add_command(label="Save as...")
-        self.fileMenu.add_separator()
-        self.fileMenu.add_command(label="Exit", command=self.close_app)
-        
-        top_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15))
-        top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
-        
-        # Insert the project name and description
-        label_text = f"{self.project_name}\n{self.project_description}"
-        tk.Label(top_frame, text=label_text, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size / 1.7)), padx=10, pady=10).pack(expand=True, fill='both')
-    
-        # Create and place the frames
-        top_height = int(self.height * 0.7)
-        
-        left_frame_width_mult = 0.2
-        map_width_multiplier = 0.6
-        right_frame_width_mult = 1 - left_frame_width_mult - map_width_multiplier
-
-        left_frame = tk.Frame(self.root, width=int(self.width * left_frame_width_mult), height=top_height)
-        left_frame.grid(row=1, column=0, sticky="nsew")
-
-        middle_frame = tk.Frame(self.root, width=int(self.width * map_width_multiplier), height=top_height, bg=self.bg, border=1, borderwidth=1, relief="solid")
-        middle_frame.grid(row=1, column=1, sticky="nsew")
-
-        self.right_frame = tk.Frame(self.root, width=int(self.width *right_frame_width_mult), height=top_height, bg=self.white, border=1, borderwidth=1, relief="solid")
-        self.right_frame.grid(row=1, column=2, sticky="nsew")
-        self.update_right_frame()
-
-        bottom_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15), bg=self.bg)
-        bottom_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
-
-        # Configure grid weights to allow expansion
-        self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_columnconfigure(1, weight=1)
-        self.root.grid_columnconfigure(2, weight=1)
-        self.root.grid_rowconfigure(0, weight=0)
-        self.root.grid_rowconfigure(1, weight=1)
-        self.root.grid_rowconfigure(2, weight=0)
-        
-        map_widget = tkintermapview.TkinterMapView(middle_frame, width=int(self.width * map_width_multiplier), height=top_height)
-        map_widget.pack(expand=True, fill='both', padx=50, pady=50)
-        
-        map_widget.fit_bounding_box((bounding_box[3], bounding_box[0]), (bounding_box[1], bounding_box[2]))
-                
-        for index, line_path in enumerate(pipes_lines_paths):
-            pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
-            map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
-
-        self.menu_tree = ttk.Treeview(left_frame, show="tree")
-        
-        self.menu_tree.bind("<Double-1>", lambda event: self.handle_menu_click(event))
-        
-        self.menu_tree.column("#0", width=int(self.width * left_frame_width_mult))
-        self.menu_tree.heading("#0", text="Setup")
-        self.menu_tree.pack(expand=True, fill='both')
-        
-        # Add vertical padding to Treeview items
-        style = ttk.Style()
-        style.configure("Treeview", rowheight=35)  # Adjust rowheight as needed
-        style.configure("Treeview", font=(self.font, int(self.font_size // 2.5)))
-
-        # Add items to Treeview
-        # Disable the ability to collapse or hide the children
-        parent_nodes = {}
-        for item in LEFT_MENU:
-            if not item["leaf"]:
-                parent_node = self.menu_tree.insert("", "end", text=item["name"], open=True)
-                parent_nodes[item["step"]] = parent_node
-            else:
-                self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
-        
-        # Add the bottom frame widgets
-        tk.Label(bottom_frame, text="Message Window", fg=self.fg, bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=30)
-
-    
-    def update_right_frame(self):
-        # Clear the right frame
-        for widget in self.right_frame.winfo_children():
-            widget.destroy()
-        
-        # Add the right frame widgets
-        tk.Label(self.right_frame, text="     Scenario Properties     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
-        
-        if self.closeness_metric: tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.betweeness_metric: tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.bridges_metric: tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.cell_lower_bound: tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.combined_metric_weight: tk.Label(self.right_frame, text=f"Combined metric weight: {self.combined_metric_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.select_square_size: tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-
-    def open_map_popup(self, img_path: str, title: str = "", window_width: int = 800, window_height: int = 800):
-        window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
-        
-        # Center the window
-        x = (self.screen_width / 2) - (window_width / 2)
-        y = (self.screen_height / 2) - (window_height / 2)
-        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
-        
-        img = Image.open(img_path)
-        img_resized = img.resize((int(window_width * 0.95), int(window_height * 0.95)))
-        photo_image = ImageTk.PhotoImage(img_resized)
-        
-        img_label = tk.Label(window_frame, image=photo_image)
-        img_label.image = photo_image
-        img_label.pack(expand=True, fill='both')
-        
-        window.title(title)
-        window.mainloop()
-        
-    
-    def criticality_maps_per_cell_size(self):
-        
-        
-        def next_image():
-            nonlocal count
-            count += 1
-            if count >= len(all_images):
-                count = 0
-            img_label.config(image=all_images[count])
-            img_label.image = all_images[count]
-        
-        
-        def previous_image():
-            nonlocal count
-            count -= 1
-            if count < 0:
-                count = len(all_images) - 1
-            img_label.config(image=all_images[count])
-            img_label.image = all_images[count]
-            
-
-        window = tk.Toplevel(self.root)
-        window.title("Criticality Maps per Cell Size")
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
-        
-        # Center the window
-        window_width = 1300
-        window_height = self.root.winfo_screenheight()
-        x = (self.screen_width / 2) - (window_width / 2)
-        y = (self.screen_height / 2) - (window_height / 2)
-        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
-        
-        # Find all files in the Fishnet_Grids folder that are .png files
-        files = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png")]            
-        files = sorted(files, key=lambda x: int(x.split("_")[0]))
-        
-        all_images = []            
-
-        cell_boundaries = [str(cell_size) for cell_size in range(self.cell_lower_bound, self.cell_upper_bound + 1, 100)]
-
-        for file in files:
-
-            if not any(cell_boundary in file for cell_boundary in cell_boundaries):
-                continue
-            
-            img = Image.open(os.path.join(self.step2_output_path, file))
-            img_resized = img.resize((int(window_width * 0.8), int(window_height * 0.8)))
-            photo_image = ImageTk.PhotoImage(img_resized)
-            all_images.append(photo_image)
-        
-        count = 0
-        
-        img_label = tk.Label(window_frame, image=all_images[0])
-        img_label.image = all_images[count]
-        img_label.grid(row=0, column=0, pady=10, columnspan=2)                
-
-        previous_button = tk.Button(window_frame, text="Previous", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=previous_image)
-        previous_button.grid(row=1, column=0, padx=5, pady=10)
-
-        next_button = tk.Button(window_frame, text="Next", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=next_image)
-        next_button.grid(row=1, column=1, pady=10)
     
     
     def selected_cell_size(self):
@@ -787,7 +878,7 @@ class PipeReplacementTool:
             run_button.config(state=tk.NORMAL)
             window.update()
             self.update_right_frame()
-        
+            
         
         window = tk.Toplevel(self.root)
         window_frame = tk.Frame(window, bg=self.bg)
@@ -818,5 +909,3 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=3, column=1, padx=5, pady=10, columnspan=2)
-
-    
