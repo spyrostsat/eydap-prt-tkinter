@@ -3,6 +3,7 @@ import pandas as pd
 import math
 import numpy as np
 import geopandas as gpd
+from pprint import pprint
 from shapely import geometry
 import libpysal as lps
 from esda.moran import Moran, Moran_Local
@@ -851,7 +852,7 @@ def process_pipes_cell_data(path_pipes, path_fishnet, fishnet_index, row_number_
     cell_index = fishnet_index.iloc[row_number_to_keep - 1]
 
     # Get the list of pipes contained in the specific cell
-    pipes_cell = results_pipe_clusters[cell_index]
+    pipes_cell = results_pipe_clusters[str(cell_index)]
 
     # Create a dataframe containing only the pipes of the specific cell
     pipes_gdf_cell = pipes_gdf[pipes_gdf['LABEL'].isin(pipes_cell)]
@@ -1047,6 +1048,8 @@ def check_items_in_key(dictionary, fishnet_index, row_number_to_keep) -> Tuple[s
     except Exception as e:
         # Handle other potential errors
         return f"Προέκυψε σφάλμα: {e}", False
+
+    cell_index = str(cell_index)
 
     # Check if the cell_index exists in the dictionary
     if cell_index not in dictionary:

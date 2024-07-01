@@ -79,6 +79,7 @@ class PipeReplacementTool:
         self.initial_configurations()
         
         # Initialize all class variables related to the metadata.json file to None
+        self.project_opened = False
         self.project_folder = None
         self.project_name = None
         self.project_description = None
@@ -134,7 +135,9 @@ class PipeReplacementTool:
 
 
     def close_app(self):
-        self.save_scenario()
+        if self.project_opened: 
+            self.save_scenario()
+        
         self.root.destroy()
         self.root.quit()
         exit()
@@ -301,6 +304,12 @@ class PipeReplacementTool:
         self.sorted_fishnet_df = pd.read_csv(os.path.join(self.project_folder, metadata["sorted_fishnet_df"])) if metadata.get("sorted_fishnet_df") else None
         self.results_pipe_clusters = metadata.get("results_pipe_clusters")
         self.fishnet_index = pd.read_csv(os.path.join(self.project_folder, metadata["fishnet_index"])) if metadata.get("fishnet_index") else None
+        
+        if self.fishnet_index is not None:
+            # If fishnet_index is a DataFrame, convert it to a Series
+            if isinstance(self.fishnet_index, pd.DataFrame):
+                self.fishnet_index = self.fishnet_index.squeeze()
+        
         self.path_fishnet = metadata.get("path_fishnet")
         self.step2b_finished = metadata.get("step2b_finished")
         
@@ -407,6 +416,12 @@ class PipeReplacementTool:
                 img_path = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png") and 'lisa' in f][0]
                 self.update_middle_frame('criticality_map_selected_cell_size', os.path.join(self.step2_output_path, img_path))
             
+            if selected_item == "LCC optimization":
+                if not self.step2b_finished:
+                    messagebox.showerror("Error", "You need to run the risk assessment first")
+                    return
+                self.lcc_optimization()
+            
         except IndexError:
             pass
     
@@ -475,6 +490,7 @@ class PipeReplacementTool:
     
     
     def main_page(self):
+        self.project_opened = True
         self.network_bounding_box, self.network_shp_centroid, self.network_pipes_lines_paths, self.network_shapefile_attributes = extract_network_shapefile_data(self.network_shapefile)
         self.damages_bounding_box, self._damages_bbox_centroid, self.damages_points, self.damages_shapefile_attributes = extract_damages_shapefile_data(self.damage_shapefile)
         
@@ -586,9 +602,7 @@ class PipeReplacementTool:
             map_widget.pack(expand=True, fill='both', padx=50, pady=50)
             
             map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
-            
-            print(self.damages_shapefile_attributes)
-            
+                        
             for index, point in enumerate(self.damages_points):
                 map_widget.set_marker(point[0], point[1], data=int(self.damages_shapefile_attributes['KOD_VLAVIS'][index]), command=self.handle_marker_click)
         
@@ -909,3 +923,122 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=3, column=1, padx=5, pady=10, columnspan=2)
+
+
+    def lcc_optimization(self):
+        
+        
+        def optimize_cell():
+            cell_index = cell_index_entry.get()
+            if not cell_index:
+                info_label.config(text="Please insert a cell index", fg=self.danger_bg)
+                run_button.config(state=tk.NORMAL)
+                return
+            
+            cell_index = int(cell_index)  # TODO: Make sure the user has inserted the correct values
+            
+            pipe_materials_lifespan = {}
+            for material_name in self.unique_pipe_materials_names:
+                pipe_materials_lifespan[material_name] = pipe_materials[material_name].get()
+            
+            contract_lifespan = contract_lifespan_slider.get()
+            time_relaxation = time_relaxation_slider.get()
+            
+            message, is_valid = check_items_in_key(self.results_pipe_clusters, self.fishnet_index, cell_index)
+            
+            if not is_valid:
+                info_label.config(text=message, fg=self.danger_bg)
+                run_button.config(state=tk.NORMAL)
+                return
+            
+            os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}"), exist_ok=True)
+
+            # Run functions
+            pipes_gdf_cell = process_pipes_cell_data(self.topological_analysis_result_shapefile, self.path_fishnet, self.fishnet_index, cell_index, self.results_pipe_clusters, self.pipe_materials)
+            pipe_table_trep, LLCCn, ann_budg, xl, xu = calculate_investment_timeseries(pipes_gdf_cell, contract_lifespan, 50, time_relaxation)
+
+            # Run optimization
+            # number of pipes in this cell
+            number_of_pipes = pipe_table_trep.count()[0]
+
+            # define 3 hyperparameters for optimization
+            pop_size = int(round((7.17 * number_of_pipes - 1.67), -1))  # linear equation going through (10,70) and (70,500)
+            n_gen = int(round((1.33 * number_of_pipes + 6.67), -1))  # linear equation going through (70,100) and (10,20)
+            n_offsprings = int(max(round((pop_size / 5), -1), 5))
+            problem = MyProblem(pipe_table_trep, contract_lifespan, LLCCn, xl, xu)
+            algorithm = NSGA2(pop_size=pop_size, n_offsprings=n_offsprings, sampling=IntegerRandomSampling(), crossover=SBX(prob=0.9, eta=15, repair=RoundingRepair()), mutation=PM(eta=20, repair=RoundingRepair()), eliminate_duplicates=True)
+            
+            info_label.config(text=f"Optimizing cell {cell_index}. This may take a while.", fg=self.fg)
+            run_button.config(state=tk.DISABLED)
+            window.update()
+            
+            res = minimize(problem, algorithm, seed=1, termination=('n_gen', 1), save_history=True, verbose=True)
+            
+            print("Optimization finished. You can close this window and proceed to the next step.")
+            X = res.X
+            F = res.F
+
+            pipes_gdf_cell_merged = manipulate_opt_results(self.edges, X, F, pipe_table_trep, pipes_gdf_cell)  # Run function for making final geodataframe
+
+            pre_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}")
+            pipes_gdf_cell_merged.to_file(pre_path + f"/Priority_{cell_index}_cell_optimal_replacement.shp")  # Save the shape file into Cell_optimization_results/Cell_Priority_#
+            
+            info_label.config(text=f"Calculation for Cell {cell_index} is finished.\nContinue with another cell or close the window and proceed.", fg=self.success_bg)
+            run_button.config(state=tk.NORMAL)
+            window.update()
+            self.update_right_frame()
+        
+        
+        window = tk.Toplevel(self.root)
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        # Center the window
+        window_width = self.screen_width // 2.2
+        window_height = self.screen_height // 1.4
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        self.results_pipe_clusters = optimize_pipe_clusters(self.results_pipe_clusters, self.df_metrics, self.sorted_fishnet_df)
+        os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results"), exist_ok=True)
+
+        pipe_materials_label = tk.Label(window_frame, text=f"Insert pipe materials and their lifespan", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=2)
+                
+        pipe_materials = {}
+        for index, material_name in enumerate(self.unique_pipe_materials_names):
+            material_label = tk.Label(window_frame, text=material_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            material_label.grid(row=index+1, column=0, padx=5, pady=10)
+            
+            pipe_materials[material_name] = tk.Entry(window_frame)
+            pipe_materials[material_name].grid(row=index+1, column=1, padx=5, pady=10)
+            pipe_materials[material_name].insert(0, self.pipe_materials[material_name])
+        
+        contract_lifespan_label = tk.Label(window_frame, text="Insert lifespan of contract work", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        contract_lifespan_label.grid(row=index+2, column=0, padx=5, pady=20)
+        contract_lifespan_slider = tk.Scale(window_frame, from_=5, to=15, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
+        contract_lifespan_slider.grid(row=index+2, column=1, padx=5, pady=20)
+        contract_lifespan_slider.set(10)
+        
+        time_relaxation_label = tk.Label(window_frame, text="Allowable time span relaxation", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        time_relaxation_label.grid(row=index+3, column=0, padx=5, pady=20)
+        time_relaxation_slider = tk.Scale(window_frame, from_=2, to=5, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
+        time_relaxation_slider.grid(row=index+3, column=1, padx=5, pady=20)
+        time_relaxation_slider.set(3)        
+
+        # Add a label and an input for the user to select the cell index to optimize
+        cell_index_label = tk.Label(window_frame, text="Select the cell index to optimize", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_index_label.grid(row=index+4, column=0, padx=5, pady=20)
+        cell_index_entry = tk.Entry(window_frame)
+        cell_index_entry.grid(row=index+4, column=1, padx=5, pady=20)
+        
+        # Add the 'Run' button to the window
+        run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=optimize_cell)
+        run_button.grid(row=index+5, column=0, padx=5, pady=10, columnspan=2)
+        
+        # Info label
+        info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=2)
+    

@@ -109,13 +109,6 @@ LEFT_MENU = [
 		"completed": False,
 	},
     {
-		"name": "Select cell for optimization",
-		"step": 4,
-		"leaf": True,
-		"selected": False,
-		"completed": False,
-	},
-    {
 		"name": "Optimized cells",
 		"step": 4,
 		"leaf": True,
