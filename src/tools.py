@@ -3,7 +3,6 @@ import pandas as pd
 import math
 import numpy as np
 import geopandas as gpd
-from pprint import pprint
 from shapely import geometry
 import libpysal as lps
 from esda.moran import Moran, Moran_Local
@@ -28,16 +27,16 @@ import momepy
 import contextily as ctx
 import matplotlib.colors as mcolors
 
+#### STEP1
 
-def process_shapefile(
-    shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path
-):
+
+def process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path):
     # Load the shapefile as geodataframe and convert to EPSG 2100
     gdf = gpd.read_file(shp_path)
     gdf = gdf.to_crs(epsg=2100)
 
     # Convert the GeoDataFrame into a graph
-    G = momepy.gdf_to_nx(gdf, approach="primal")
+    G = momepy.gdf_to_nx(gdf, approach='primal')
 
     # Extract nodes and edges
     nodes, edges = momepy.nx_to_gdf(G)
@@ -47,11 +46,9 @@ def process_shapefile(
 
     # Function to check if an edge is a bridge
     def is_bridge(edge_row):
-        start_coord = edge_row["geometry"].coords[0]
-        end_coord = edge_row["geometry"].coords[-1]
-        return any(
-            [(start_coord, end_coord) in bridges, (end_coord, start_coord) in bridges]
-        )
+        start_coord = (edge_row['geometry'].coords[0])
+        end_coord = (edge_row['geometry'].coords[-1])
+        return any([(start_coord, end_coord) in bridges, (end_coord, start_coord) in bridges])
 
     # Create a list of nodes
     list_of_nodes = list(G.nodes(data=True))
@@ -65,81 +62,54 @@ def process_shapefile(
     betweenness_centrality_mapping = {}
 
     for (x, y), attrs in list_of_nodes:
-        node_id = attrs["nodeID"]
+        node_id = attrs['nodeID']
         coords = (x, y)
         closeness_centrality_mapping[node_id] = closeness_centrality[coords]
         betweenness_centrality_mapping[node_id] = betweenness_centrality[coords]
 
     # Add the two metrics as columns in the edges data frame
-    edges["cc"] = (
-        edges["node_start"].map(closeness_centrality_mapping)
-        + edges["node_end"].map(closeness_centrality_mapping)
-    ) / 2
-    edges["bc"] = (
-        edges["node_start"].map(betweenness_centrality_mapping)
-        + edges["node_end"].map(betweenness_centrality_mapping)
-    ) / 2
+    edges['cc'] = (edges['node_start'].map(closeness_centrality_mapping) + edges['node_end'].map(closeness_centrality_mapping)) / 2
+    edges['bc'] = (edges['node_start'].map(betweenness_centrality_mapping) + edges['node_end'].map(betweenness_centrality_mapping)) / 2
 
     # Normalize the 'closeness_centrality' and 'betweenness_centrality' columns
-    edges["cc_norm"] = (edges["cc"] - edges["cc"].min()) / (
-        edges["cc"].max() - edges["cc"].min()
-    )
-    edges["bc_norm"] = (edges["bc"] - edges["bc"].min()) / (
-        edges["bc"].max() - edges["bc"].min()
-    )
+    edges['cc_norm'] = (edges['cc'] - edges['cc'].min()) / (edges['cc'].max() - edges['cc'].min())
+    edges['bc_norm'] = (edges['bc'] - edges['bc'].min()) / (edges['bc'].max() - edges['bc'].min())
 
     # Add a 'is_bridge' column to the edges DataFrame
-    edges["is_bridge"] = 0  # Initialize all values as 0
+    edges['is_bridge'] = 0  # Initialize all values as 0
 
     for index, row in edges.iterrows():
-        # Assign 1 if the edge is a bridge, otherwise 0
-        edges.at[index, "is_bridge"] = 1 if is_bridge(row) else 0
+      # Assign 1 if the edge is a bridge, otherwise 0
+      edges.at[index, 'is_bridge'] = 1 if is_bridge(row) else 0
 
     # Calculate the composite metric
-    edges["cm"] = (
-        (edges["cc_norm"] * weight_closeness)
-        + (edges["bc_norm"] * weight_betweenness)
-        + (edges["is_bridge"] * weight_bridge)
-    )
+    edges['cm'] = ((edges['cc_norm'] * weight_closeness) +
+                   (edges['bc_norm'] * weight_betweenness) +
+                   (edges['is_bridge'] * weight_bridge))
 
     # Create a new DataFrame df_metrics as a copy of edges
     df_metrics = edges.copy(deep=True)
 
     # Create df_metrics to show to user
-    df_metrics = df_metrics[
-        [
-            "ID",
-            "LABEL",
-            "D",
-            "MATERIAL",
-            "USER_L",
-            "STRTN_ID",
-            "STOPN_ID",
-            "cc_norm",
-            "bc_norm",
-            "is_bridge",
-            "cm",
-        ]
-    ]
+    df_metrics = df_metrics[['ID','LABEL','D','MATERIAL','USER_L','STRTN_ID','STOPN_ID','cc_norm','bc_norm','is_bridge','cm']]
 
     # Round the columns 'cc_norm', 'bc_norm', and 'cm' in df_metrics
-    df_metrics["cc_norm"] = df_metrics["cc_norm"].round(
-        3
-    )  # Replace 2 with your desired number of decimal places
-    df_metrics["bc_norm"] = df_metrics["bc_norm"].round(3)
-    df_metrics["cm"] = df_metrics["cm"].round(3)
+    df_metrics['cc_norm'] = df_metrics['cc_norm'].round(3)  # Replace 2 with your desired number of decimal places
+    df_metrics['bc_norm'] = df_metrics['bc_norm'].round(3)
+    df_metrics['cm'] = df_metrics['cm'].round(3)
 
     # Rename columns in df_metrics
     rename_dict = {
-        "D": "DIAMETER (mm)",
-        "USER_L": "LENGTH (m)",
-        "STRTN_ID": "STARTING NODE",
-        "STOPN_ID": "STOPPING NODE",
-        "cc_norm": "CLOSENESS CENTRALITY",
-        "bc_norm": "BETWEENNESS CENTRALITY",
-        "is_bridge": "BRIDGE",
-        "cm": "COMPOSITE METRIC",
-    }
+        'D'      : 'DIAMETER (mm)',
+        'USER_L' : 'LENGTH (m)',
+        'STRTN_ID': 'STARTING NODE',
+        'STOPN_ID': 'STOPPING NODE',
+        'cc_norm': 'CLOSENESS CENTRALITY',
+        'bc_norm': 'BETWEENNESS CENTRALITY',
+        'is_bridge': 'BRIDGE',
+        'cm': 'COMPOSITE METRIC',
+
+        }
     df_metrics = df_metrics.rename(columns=rename_dict)
 
     df_metrics.to_csv(output_path + "df_metrics.csv")
@@ -283,235 +253,190 @@ def plot_metrics(gdf, G, nodes, edges, plot_metrics, figsize, plot, output_path)
 
 def save_edge_gdf_shapefile(gdf, output_path):
     if gdf is not None:
-        gdf.to_file(output_path, driver="ESRI Shapefile")
-        print(f"Edge GeoDataFrame saved to {output_path}")
+        gdf.to_file(output_path, driver='ESRI Shapefile')
+        print(f'Edge GeoDataFrame saved to {output_path}')
     else:
-        print("No data to save. Run the analysis first to generate data.")
+        print('No data to save. Run the analysis first to generate data.')
 
-
+    
+#### STEP2
 def read_shapefiles(pipe_shapefile_path, failures_shapefile_path):
-    pipe_gdf = gpd.read_file(pipe_shapefile_path).set_crs("EPSG:2100")
-    failures_gdf = gpd.read_file(failures_shapefile_path).set_crs("EPSG:2100")
-    return pipe_gdf, failures_gdf
+  pipe_gdf = gpd.read_file(pipe_shapefile_path).set_crs('EPSG:2100')
+  failures_gdf = gpd.read_file(failures_shapefile_path).set_crs('EPSG:2100')
+  return pipe_gdf, failures_gdf
 
 
 def create_fishnet(square_size, pipe_gdf):
-    total_bounds = pipe_gdf.total_bounds
-    minX, minY, maxX, maxY = total_bounds
-    x, y = (minX, minY)
-    geom_array = []
 
-    while y <= maxY:
-        while x <= maxX:
-            geom = geometry.Polygon(
-                [
-                    (x, y),
-                    (x, y + square_size),
-                    (x + square_size, y + square_size),
-                    (x + square_size, y),
-                    (x, y),
-                ]
-            )
-            geom_array.append(geom)
-            x += square_size
-        x = minX
-        y += square_size
+  total_bounds = pipe_gdf.total_bounds
+  minX, minY, maxX, maxY = total_bounds
+  x, y = (minX, minY)
+  geom_array = []
 
-    fishnet = gpd.GeoDataFrame(geom_array, columns=["geometry"]).set_crs("EPSG:2100")
-    return fishnet
+  while y <= maxY:
+      while x <= maxX:
+          geom = geometry.Polygon([(x, y), (x, y + square_size), (x + square_size, y + square_size), (x + square_size, y), (x, y)])
+          geom_array.append(geom)
+          x += square_size
+      x = minX
+      y += square_size
+
+  fishnet = gpd.GeoDataFrame(geom_array, columns=['geometry']).set_crs('EPSG:2100')
+  return fishnet
 
 
-def spatial_autocorrelation_analysis(
-    pipe_shapefile_path,
-    failures_shapefile_path,
-    lower_bound_cell,
-    upper_bound_cell,
-    weight_avg_combined_metric,
-    weight_failures,
-    output_path,
-):
-    results = []
+def spatial_autocorrelation_analysis(pipe_shapefile_path, 
+                                     failures_shapefile_path, 
+                                     lower_bound_cell, 
+                                     upper_bound_cell, 
+                                     weight_avg_combined_metric, 
+                                     weight_failures, 
+                                     output_path):
+  results = []
 
-    pipe_gdf, failures_gdf = read_shapefiles(
-        pipe_shapefile_path, failures_shapefile_path
-    )
+  pipe_gdf, failures_gdf = read_shapefiles(pipe_shapefile_path, failures_shapefile_path)
 
-    for square_size in range(lower_bound_cell, upper_bound_cell + 100, 100):
-        fishnet = create_fishnet(square_size, pipe_gdf)
+  for square_size in range(lower_bound_cell, upper_bound_cell+100, 100):
+      fishnet = create_fishnet(square_size, pipe_gdf)
 
-        # Perform spatial join to count failures per feature of the fishnet
-        fishnet_failures = fishnet.join(
-            gpd.sjoin(failures_gdf, fishnet)
-            .groupby("index_right")
-            .size()
-            .rename("failures"),
-            how="left",
-        )
+      # Perform spatial join to count failures per feature of the fishnet
+      fishnet_failures = fishnet.join(
+          gpd.sjoin(failures_gdf, fishnet).groupby("index_right").size().rename("failures"),
+          how="left",
+      )
 
-        fishnet_failures = fishnet_failures.dropna()
+      fishnet_failures = fishnet_failures.dropna()
 
-        # Perform spatial join with pipe_gdf to calculate the average Combined Metric per fishnet square
-        pipe_metrics = gpd.sjoin(
-            pipe_gdf, fishnet_failures, how="inner", predicate="intersects"
-        )
-        avg_metrics_per_square = pipe_metrics.groupby("index_right")["cm"].mean()
+      # Perform spatial join with pipe_gdf to calculate the average Combined Metric per fishnet square
+      pipe_metrics = gpd.sjoin(pipe_gdf, fishnet_failures, how='inner', predicate='intersects')
+      avg_metrics_per_square = pipe_metrics.groupby("index_right")['cm'].mean()
 
-        # Add the average Combined Metric to the fishnet_failures GeoDataFrame
-        fishnet_failures["avg_combined_metric"] = fishnet_failures.index.map(
-            avg_metrics_per_square
-        )
+      # Add the average Combined Metric to the fishnet_failures GeoDataFrame
+      fishnet_failures['avg_combined_metric'] = fishnet_failures.index.map(avg_metrics_per_square)
 
-        # Standardize the 'failures' column from 0 to 1
-        min_failures = fishnet_failures["failures"].min()
-        max_failures = fishnet_failures["failures"].max()
-        fishnet_failures["failures_standardized"] = (
-            fishnet_failures["failures"] - min_failures
-        ) / (max_failures - min_failures)
+      # Standardize the 'failures' column from 0 to 1
+      min_failures = fishnet_failures['failures'].min()
+      max_failures = fishnet_failures['failures'].max()
+      fishnet_failures['failures_standardized'] = (fishnet_failures['failures'] - min_failures) / (max_failures - min_failures)
 
-        # Add the weighted average column
-        fishnet_failures["weighted_avg"] = (
-            fishnet_failures["avg_combined_metric"] * weight_avg_combined_metric
-            + fishnet_failures["failures_standardized"] * weight_failures
-        ) / (weight_avg_combined_metric + weight_failures)
+      # Add the weighted average column
+      fishnet_failures['weighted_avg'] = (
+          fishnet_failures['avg_combined_metric'] * weight_avg_combined_metric +
+          fishnet_failures['failures_standardized'] * weight_failures
+      ) / (weight_avg_combined_metric + weight_failures)
 
-        # Store fishnet_failures as an instance variable
-        # fishnet_failures = fishnet_failures
+      # Store fishnet_failures as an instance variable
+      # fishnet_failures = fishnet_failures
 
-        # Create static choropleth maps (Equal intervals, Quantiles, Natural Breaks)
-        # Ensure that the create_choropleth_maps method can handle the new column
-        create_choropleth_maps(fishnet_failures, square_size, output_path)
+      # Create static choropleth maps (Equal intervals, Quantiles, Natural Breaks)
+      # Ensure that the create_choropleth_maps method can handle the new column
+      create_choropleth_maps(fishnet_failures, square_size, output_path)
 
-        # Calculate global Moran's I and store results
-        y = fishnet_failures["weighted_avg"]
-        w = lps.weights.Queen.from_dataframe(fishnet_failures, use_index=False)
-        w.transform = "r"
-        moran = Moran(y, w)
-        results.append((square_size, moran.I, moran.p_sim, moran.z_sim))
+      # Calculate global Moran's I and store results
+      y = fishnet_failures['weighted_avg']
+      w = lps.weights.Queen.from_dataframe(fishnet_failures)
+      w.transform = 'r'
+      moran = Moran(y, w)
+      results.append((square_size, moran.I, moran.p_sim, moran.z_sim))
 
-    # Print results
-    best_square_size = find_best_square_size(results)
-    print_results(results, best_square_size, output_path)
+  # Print results
+  best_square_size = find_best_square_size(results)
+  print_results(results, best_square_size, output_path)
 
-    return results, best_square_size
+  return results, best_square_size
 
 
 def create_choropleth_maps(fishnet_failures, square_size, output_path):
-    # fig, ax = plt.subplots(figsize=(12, 10))
-    # fishnet_failures.plot(column='weighted_avg', scheme='equal_interval', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
-    #                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
-    # fishnet_failures.boundary.plot(ax=ax)
-    # plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Equal intervals', fontsize = 18)
-    # plt.axis('off')
-    # plt.tight_layout()
-    # plt.savefig(output_path + '_' + str(square_size) + '_' +'equal_intervals_coropleth_map.png')
+  # fig, ax = plt.subplots(figsize=(12, 10))
+  # fishnet_failures.plot(column='weighted_avg', scheme='equal_interval', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
+  #                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
+  # fishnet_failures.boundary.plot(ax=ax)
+  # plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Equal intervals', fontsize = 18)
+  # plt.axis('off')
+  # plt.tight_layout()
+  # plt.savefig(output_path + '_' + str(square_size) + '_' +'equal_intervals_coropleth_map.png')
 
-    # Create a static choropleth map of the failure number per grid cell of the fishnet (Quantiles)
-    fig, ax = plt.subplots(figsize=(12, 10))
-    fishnet_failures.plot(
-        column="weighted_avg",
-        scheme="quantiles",
-        k=10,
-        cmap="RdYlGn_r",
-        legend=True,
-        ax=ax,
-        legend_kwds={
-            "loc": "center left",
-            "bbox_to_anchor": (1, 0.5),
-            "fmt": "{:.2f}",
-            "interval": True,
-        },
-    )
-    fishnet_failures.boundary.plot(ax=ax)
-    plt.title(
-        f"Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Quantiles",
-        fontsize=18,
-    )
-    plt.axis("off")
-    plt.tight_layout()
-    plt.savefig(output_path + str(square_size) + "_" + "coropleth_map.png")
+  # Create a static choropleth map of the failure number per grid cell of the fishnet (Quantiles)
+  fig, ax = plt.subplots(figsize=(12, 10))
+  fishnet_failures.plot(column='weighted_avg', scheme='quantiles', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
+                    legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
+  fishnet_failures.boundary.plot(ax=ax)
+  plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Quantiles', fontsize = 18)
+  plt.axis('off')
+  plt.tight_layout()
+  plt.savefig(output_path + '/'+ str(square_size) + '_' +'coropleth_map.png')
 
-    # # Create a static choropleth map of the failure number per grid cell of the fishnet (Natural Breaks)
-    # fig, ax = plt.subplots(figsize=(12, 10))
-    # fishnet_failures.plot(column='weighted_avg', scheme='natural_breaks', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
-    #                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
-    # fishnet_failures.boundary.plot(ax=ax)
-    # plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Natural Breaks', fontsize = 18)
-    # plt.axis('off')
-    # plt.tight_layout()
-    # plt.savefig(output_path + '_' + str(square_size) + '_' +'natural_breaks_coropleth_map.png')
+  # # Create a static choropleth map of the failure number per grid cell of the fishnet (Natural Breaks)
+  # fig, ax = plt.subplots(figsize=(12, 10))
+  # fishnet_failures.plot(column='weighted_avg', scheme='natural_breaks', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
+  #                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
+  # fishnet_failures.boundary.plot(ax=ax)
+  # plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Natural Breaks', fontsize = 18)
+  # plt.axis('off')
+  # plt.tight_layout()
+  # plt.savefig(output_path + '_' + str(square_size) + '_' +'natural_breaks_coropleth_map.png')
 
 
 def print_results(results, best_square_size, output_path):
-    # Print results here as in your original code
-    # Writing the results to a text file
+      # Print results here as in your original code
+      # Writing the results to a text file
 
-    output_file_path = output_path + "square_size_comparison_results.txt"
+      output_file_path = output_path + '/square_size_comparison_results.txt'
 
-    with open(output_file_path, "w") as file:
-        for size, moran_i, p_value, z_score in results:
-            file.write(f"Square Size: {size} m\n")
-            file.write(f"Moran's I value: {round(moran_i,4)}\n")
-            file.write(f"Moran's I p-value: {round(p_value,4)}\n")
-            file.write(f"Moran's I z-score: {round(z_score,4)}\n")
-            file.write("\n")
-        file.write(f"The optimal square size is: {best_square_size} m\n")
-    # Extract data for plotting
-    square_sizes, moran_values, p_values, z_scores = zip(*results)
+      with open(output_file_path, 'w') as file:
+          for size, moran_i, p_value, z_score in results:
+              file.write(f"Square Size: {size} m\n")
+              file.write(f"Moran's I value: {round(moran_i,4)}\n")
+              file.write(f"Moran's I p-value: {round(p_value,4)}\n")
+              file.write(f"Moran's I z-score: {round(z_score,4)}\n")
+              file.write("\n")
+          file.write(f"The optimal square size is: {best_square_size} m\n")
+      # Extract data for plotting
+      square_sizes, moran_values, p_values, z_scores = zip(*results)
 
-    # Create a plot with multiple y-axes
-    fig, ax1 = plt.subplots(figsize=(10, 6))
+      # Create a plot with multiple y-axes
+      fig, ax1 = plt.subplots(figsize=(10, 6))
 
-    # Plot Moran's I on the left y-axis
-    ax1.plot(square_sizes, moran_values, "b-", label="Moran's I", marker="o")
-    ax1.set_xlabel("Square Size (m)", fontsize=12)
-    ax1.set_ylabel("Moran's I", color="b", fontsize=12)
-    ax1.tick_params(axis="y", labelcolor="b")
+      # Plot Moran's I on the left y-axis
+      ax1.plot(square_sizes, moran_values, 'b-', label="Moran's I", marker='o')
+      ax1.set_xlabel("Square Size (m)", fontsize=12)
+      ax1.set_ylabel("Moran's I", color='b', fontsize=12)
+      ax1.tick_params(axis='y', labelcolor='b')
 
-    # Create right y-axes for p-value and z-score
-    ax2 = ax1.twinx()
-    ax2.plot(square_sizes, p_values, "r-", label="p-value", marker="s")
-    ax2.set_ylabel("p-value", color="r", fontsize=12)
-    ax2.tick_params(axis="y", labelcolor="r")
+      # Create right y-axes for p-value and z-score
+      ax2 = ax1.twinx()
+      ax2.plot(square_sizes, p_values, 'r-', label="p-value", marker='s')
+      ax2.set_ylabel("p-value", color='r', fontsize=12)
+      ax2.tick_params(axis='y', labelcolor='r')
 
-    ax3 = ax1.twinx()
-    ax3.spines["right"].set_position(("outward", 60))
-    ax3.plot(square_sizes, z_scores, "g-", label="z-score", marker="^")
-    ax3.set_ylabel("z-score", color="g", fontsize=12)
-    ax3.tick_params(axis="y", labelcolor="g")
+      ax3 = ax1.twinx()
+      ax3.spines['right'].set_position(('outward', 60))
+      ax3.plot(square_sizes, z_scores, 'g-', label="z-score", marker='^')
+      ax3.set_ylabel("z-score", color='g', fontsize=12)
+      ax3.tick_params(axis='y', labelcolor='g')
 
-    # Add grid lines with different colors
-    ax1.grid(True, alpha=0.7, color="b")  # Moran's I grid in blue
-    ax2.grid(True, linestyle="--", alpha=0.7, color="r")  # p-value grid in red
-    ax3.grid(True, linestyle="--", alpha=0.7, color="g")  # z-score grid in green
+      # Add grid lines with different colors
+      ax1.grid(True, alpha=0.7, color='b')  # Moran's I grid in blue
+      ax2.grid(True, linestyle='--', alpha=0.7, color='r')  # p-value grid in red
+      ax3.grid(True, linestyle='--', alpha=0.7, color='g')  # z-score grid in green
 
-    # Add labels for each y-axis
-    ax1.set_title("Moran's I, p-value, and z-score vs. Square Size", fontsize=16)
-    ax1.set_xlabel("Square Size (m)", fontsize=12)
+      # Add labels for each y-axis
+      ax1.set_title("Moran's I, p-value, and z-score vs. Square Size", fontsize=16)
+      ax1.set_xlabel("Square Size (m)", fontsize=12)
 
-    # Show the legend
-    lines, labels = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    lines3, labels3 = ax3.get_legend_handles_labels()
-    ax1.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc="upper left")
+      # Show the legend
+      lines, labels = ax1.get_legend_handles_labels()
+      lines2, labels2 = ax2.get_legend_handles_labels()
+      lines3, labels3 = ax3.get_legend_handles_labels()
+      ax1.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper left')
 
-    plt.tight_layout()
-    plt.savefig(output_path + "square_size_comparison_diagram.png")
+      plt.tight_layout()
+      plt.savefig(output_path + '/square_size_comparison_diagram.png')
 
 
 def find_best_square_size(results):
     # Define p-value thresholds
-    p_value_thresholds = [
-        0.05,
-        0.10,
-        0.15,
-        0.20,
-        0.25,
-        0.30,
-        0.35,
-        0.40,
-        0.45,
-        0.50,
-    ]  # Add more thresholds if needed
+    p_value_thresholds = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]  # Add more thresholds if needed
 
     for threshold in p_value_thresholds:
         best_square_size = None
@@ -524,9 +449,7 @@ def find_best_square_size(results):
                     best_square_size = size
 
         if best_square_size is not None:
-            print(
-                f"Best Square Size: {best_square_size} m for p-value threshold: {threshold}"
-            )
+            print(f"Best Square Size: {best_square_size} m for p-value threshold: {threshold}")
             print(f"Max Moran's I: {max_moran_i}")
             return best_square_size
 
@@ -534,17 +457,14 @@ def find_best_square_size(results):
     return None
 
 
-def optimal_fishnet(
-    pipe_shapefile_path,
-    failures_shapefile_path,
-    weight_avg_combined_metric,
-    weight_failures,
-    select_square_size,
-    output_path,
-):
-    pipe_gdf, failures_gdf = read_shapefiles(
-        pipe_shapefile_path, failures_shapefile_path
-    )
+def optimal_fishnet(pipe_shapefile_path, 
+                    failures_shapefile_path, 
+                    weight_avg_combined_metric, 
+                    weight_failures, 
+                    select_square_size, 
+                    output_path):
+
+    pipe_gdf, failures_gdf = read_shapefiles(pipe_shapefile_path, failures_shapefile_path)
 
     # Perform the analysis and store results for the optimal square size
     total_bounds = pipe_gdf.total_bounds
@@ -559,56 +479,39 @@ def optimal_fishnet(
     square_size = select_square_size
     while y <= maxY:
         while x <= maxX:
-            geom = geometry.Polygon(
-                [
-                    (x, y),
-                    (x, y + square_size),
-                    (x + square_size, y + square_size),
-                    (x + square_size, y),
-                    (x, y),
-                ]
-            )
+            geom = geometry.Polygon([(x,y), (x, y+square_size), (x+square_size, y+square_size), (x+square_size, y), (x, y)])
             geom_array.append(geom)
             x += square_size
         x = minX
         y += square_size
 
-    fishnet = gpd.GeoDataFrame(geom_array, columns=["geometry"]).set_crs("EPSG:2100")
+    fishnet = gpd.GeoDataFrame(geom_array, columns=['geometry']).set_crs('EPSG:2100')
     # fishnet.to_file(output_path + str(select_square_size) + '_fishnet_grid.shp') ### dont need to show
 
     # Perform spatial join to count failures per feature of the fishnet
     fishnet_failures = fishnet.join(
-        gpd.sjoin(failures_gdf, fishnet, how="inner", predicate="intersects")
-        .groupby("index_right")
-        .size()
-        .rename("failures"),
+        gpd.sjoin(failures_gdf, fishnet, how='inner', predicate='intersects').groupby("index_right").size().rename("failures"),
         how="left",
     )
 
     fishnet_failures = fishnet_failures.dropna()
 
     # Perform spatial join with pipe_gdf to calculate the average Combined Metric per fishnet square
-    pipe_metrics = gpd.sjoin(
-        pipe_gdf, fishnet_failures, how="inner", predicate="intersects"
-    )
-    avg_metrics_per_square = pipe_metrics.groupby("index_right")["cm"].mean()
+    pipe_metrics = gpd.sjoin(pipe_gdf, fishnet_failures, how='inner', predicate='intersects')
+    avg_metrics_per_square = pipe_metrics.groupby("index_right")['cm'].mean()
 
     # Add the average Combined Metric to the fishnet_failures GeoDataFrame
-    fishnet_failures["avg_combined_metric"] = fishnet_failures.index.map(
-        avg_metrics_per_square
-    )
+    fishnet_failures['avg_combined_metric'] = fishnet_failures.index.map(avg_metrics_per_square)
 
     # Standardize the 'failures' column from 0 to 1
-    min_failures = fishnet_failures["failures"].min()
-    max_failures = fishnet_failures["failures"].max()
-    fishnet_failures["failures_standardized"] = (
-        fishnet_failures["failures"] - min_failures
-    ) / (max_failures - min_failures)
+    min_failures = fishnet_failures['failures'].min()
+    max_failures = fishnet_failures['failures'].max()
+    fishnet_failures['failures_standardized'] = (fishnet_failures['failures'] - min_failures) / (max_failures - min_failures)
 
     # Add the weighted average column
-    fishnet_failures["weighted_avg"] = (
-        fishnet_failures["avg_combined_metric"] * weight_avg_combined_metric
-        + fishnet_failures["failures_standardized"] * weight_failures
+    fishnet_failures['weighted_avg'] = (
+        fishnet_failures['avg_combined_metric'] * weight_avg_combined_metric +
+        fishnet_failures['failures_standardized'] * weight_failures
     ) / (weight_avg_combined_metric + weight_failures)
 
     fishnet_failures = fishnet_failures.dropna()
@@ -620,14 +523,12 @@ def optimal_fishnet(
     # Spatial similarity, measured by spatial weights, shows the relative strength of a relationship between pairs of locations
 
     # Here we compute spatial weights using the Queen contiguity (8 directions)
-    w = lps.weights.Queen.from_dataframe(fishnet_failures, use_index=False)
-    w.transform = "r"
+    w = lps.weights.Queen.from_dataframe(fishnet_failures)
+    w.transform = 'r'
 
     # Attribute similarity, measured by spatial lags, is a summary of the similarity (or dissimilarity) of observations for a variable at different locations
     # The spatial lag takes the average value in each weighted neighborhood
-    fishnet_failures["weighted_fail"] = lps.weights.lag_spatial(
-        w, fishnet_failures["weighted_avg"]
-    )
+    fishnet_failures['weighted_fail'] = lps.weights.lag_spatial(w, fishnet_failures['weighted_avg'])
 
     # Global spatial autocorrelation with Moran’s I statistics
     # Moran’s I is a way to measure spatial autocorrelation.
@@ -648,34 +549,32 @@ def optimal_fishnet(
     # then we can reject the null hypothesis and conclude that the data is
     # spatially clustered together in such a way that it is unlikely to have occurred by chance alone.
 
-    y = fishnet_failures["weighted_avg"]
+    y = fishnet_failures['weighted_avg']
     moran = Moran(y, w)
     print(f"Moran's I value: {moran.I}\np-value: {moran.p_sim}\nZ-score: {moran.z_sim}")
 
     return fishnet_failures, pipe_gdf
 
 
-def local_spatial_autocorrelation(
-    pipe_shapefile_path,
-    failures_shapefile_path,
-    weight_avg_combined_metric,
-    weight_failures,
-    select_square_size,
-    output_path,
-):
+def local_spatial_autocorrelation(pipe_shapefile_path,
+                                failures_shapefile_path,
+                                weight_avg_combined_metric,
+                                weight_failures,
+                                select_square_size,
+                                output_path,):
+    
     fishnet_failures, pipe_gdf = optimal_fishnet(
         pipe_shapefile_path=pipe_shapefile_path,
         failures_shapefile_path=failures_shapefile_path,
         weight_avg_combined_metric=weight_avg_combined_metric,
         weight_failures=weight_failures,
         select_square_size=select_square_size,
-        output_path=output_path,
-    )
+        output_path=output_path,)
 
     # Perform the local spatial autocorrelation analysis
-    y = fishnet_failures["weighted_avg"]
+    y = fishnet_failures['weighted_avg']
     w = lps.weights.Queen.from_dataframe(fishnet_failures)
-    w.transform = "r"
+    w.transform = 'r'
     # Local spatial autocorrelation with Local Indicators of Spatial Association (LISA) statistics
     # While the global spatial autocorrelation can prove the existence of clusters,
     # or a positive spatial autocorrelation between the listing price and their neighborhoods,
@@ -701,26 +600,16 @@ def local_spatial_autocorrelation(
     # Create a LISA cluster map
     moran_local = Moran_Local(y, w)
 
-    fig, ax = plt.subplots(figsize=(12, 10))
-    lisa_cluster(
-        moran_local,
-        fishnet_failures,
-        p=1,
-        ax=ax,
-        legend=True,
-        legend_kwds={"loc": "center left", "bbox_to_anchor": (1, 0.5), "fmt": "{:.0f}"},
-    )
+    fig, ax = plt.subplots(figsize=(12,10))
+    lisa_cluster(moran_local, fishnet_failures, p=1,  ax=ax, legend=True,
+                  legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"})
     fishnet_failures.boundary.plot(ax=ax)
-    plt.title(
-        "LISA Cluster Map for average criticality metric per fishnet cell", fontsize=18
-    )
+    plt.title('LISA Cluster Map for average criticality metric per fishnet cell', fontsize = 18)
     plt.tight_layout()
-    plt.savefig(
-        output_path + str(select_square_size) + "_" + "final_lisa_cluster_map.png"
-    )
+    plt.savefig(output_path + '/' + str(select_square_size) + '_' +'final_lisa_cluster_map.png')
 
     # Create a data frame containing the number of failures and the local moran statistics
-    fishnet_failures["fishnet_index"] = fishnet_failures.index
+    fishnet_failures['fishnet_index'] = fishnet_failures.index
     fishnet_grid_stats_fails = pd.DataFrame(fishnet_failures)
     fishnet_grid_stats_fails["Local Moran's I (LISA)"] = moran_local._statistic
 
@@ -741,74 +630,65 @@ def local_spatial_autocorrelation(
     cluster_labels = [get_lisa_cluster_label(val) for val in moran_local.q]
 
     # Add a new column with cluster labels for significant clusters (or "NS" for non-significant clusters)
-    fishnet_grid_stats_fails["Cluster_Label"] = cluster_labels
+    fishnet_grid_stats_fails['Cluster_Label'] = cluster_labels
 
     # Sort the cells according to the cluster label and weighted metric
-    sorted_fishnet_df = fishnet_grid_stats_fails.sort_values(
-        by=["Cluster_Label", "weighted_avg"], ascending=[True, False]
-    )
+    sorted_fishnet_df = fishnet_grid_stats_fails.sort_values(by=['Cluster_Label', 'weighted_avg'], ascending=[True, False])
 
     # Spatially join the fishnet grid cells and pipes
     # First, add an explicit 'fishnet_index' column to the fishnet_failures GeoDataFrame
-    fishnet_failures["fishnet_index"] = fishnet_failures.index
+    fishnet_failures['fishnet_index'] = fishnet_failures.index
 
     # Now perform the spatial join using this new 'fishnet_index' column
-    spatial_join = gpd.sjoin(fishnet_failures, pipe_gdf, predicate="intersects")
+    spatial_join = gpd.sjoin(fishnet_failures, pipe_gdf, predicate='intersects')
 
     # Group the results by 'fishnet_index'
-    grouped = spatial_join.groupby("fishnet_index")
+    grouped = spatial_join.groupby('fishnet_index')
 
     # Create a dictionary to store the results
     results_pipe_clusters = {}
 
     # Iterate through each group (fishnet cell) and collect the associated pipe labels
     for fishnet_index, group_data in grouped:
-        pipe_labels = group_data["LABEL"].tolist()
+        print(fishnet_index)
+        pipe_labels = group_data['LABEL'].tolist()
         results_pipe_clusters[fishnet_index] = pipe_labels
 
     # final details
-    fishnet_index = sorted_fishnet_df["fishnet_index"]  # <-- Nees allages
+    fishnet_index = sorted_fishnet_df['fishnet_index'] #<-- Nees allages
 
-    sorted_fishnet_df["failures"] = sorted_fishnet_df["failures"].round(0)
-    sorted_fishnet_df["avg_combined_metric"] = sorted_fishnet_df[
-        "avg_combined_metric"
-    ].round(3)
-    sorted_fishnet_df["weighted_avg"] = sorted_fishnet_df["weighted_avg"].round(3)
-    sorted_fishnet_df["failures_standardized"] = sorted_fishnet_df[
-        "failures_standardized"
-    ].round(3)
-    sorted_fishnet_df["Local Moran's I (LISA)"] = sorted_fishnet_df[
-        "Local Moran's I (LISA)"
-    ].round(3)
-    sorted_fishnet_df = sorted_fishnet_df.drop(
-        ["weighted_fail", "fishnet_index"], axis=1
-    )
-    sorted_fishnet_df = sorted_fishnet_df.rename(
-        columns={
-            "avg_combined_metric": "top_metric",
-            "failures_standardized": "stand_fail",
-            "weighted_avg": "metric_com",
-            "Cluster_Label": "Label",
-            "Local Moran's I (LISA)": "localmoran",
-        }
-    )
+    sorted_fishnet_df['failures'] = sorted_fishnet_df['failures'].round(0)
+    sorted_fishnet_df['avg_combined_metric'] = sorted_fishnet_df['avg_combined_metric'].round(3)
+    sorted_fishnet_df['weighted_avg'] = sorted_fishnet_df['weighted_avg'].round(3)
+    sorted_fishnet_df['failures_standardized'] = sorted_fishnet_df['failures_standardized'].round(3)
+    sorted_fishnet_df["Local Moran's I (LISA)"] = sorted_fishnet_df["Local Moran's I (LISA)"].round(3)
+    sorted_fishnet_df = sorted_fishnet_df.drop(['weighted_fail','fishnet_index'],axis=1)
+    sorted_fishnet_df = sorted_fishnet_df.rename(columns={'avg_combined_metric':'top_metric','failures_standardized':'stand_fail','weighted_avg':'metric_com','Cluster_Label':'Label',"Local Moran's I (LISA)":'localmoran'})
     sorted_fishnet_df = sorted_fishnet_df.reset_index()
-    sorted_fishnet_df.rename(columns={"index": "cell_index"}, inplace=True)
+    sorted_fishnet_df.rename(columns={'index': 'cell_index'}, inplace=True)
     sorted_fishnet_df = sorted_fishnet_df.reset_index()
-    sorted_fishnet_df.rename(columns={"index": "Priority"}, inplace=True)
-    sorted_fishnet_df["Priority"] += 1
-    sorted_fishnet_df.set_index("cell_index", inplace=True)
+    sorted_fishnet_df.rename(columns={'index': 'Priority'}, inplace=True)
+    sorted_fishnet_df['Priority']+=1
+    sorted_fishnet_df.set_index('cell_index', inplace=True)
 
     # Now, the 'results_pipe_clusters' dictionary contains the pipe labels for each fishnet cell with the fishnet index as the key
-    sorted_fishnet_gdf = gpd.GeoDataFrame(sorted_fishnet_df).set_crs("EPSG:2100")
-    sorted_fishnet_gdf.to_file(
-        output_path + str(select_square_size) + "_fishnets_sorted.shp"
-    )
+    sorted_fishnet_gdf = gpd.GeoDataFrame(sorted_fishnet_df).set_crs('EPSG:2100')
+    sorted_fishnet_gdf.to_file(output_path +'/' +str(select_square_size) + '_fishnets_sorted.shp')
 
-    return sorted_fishnet_df, results_pipe_clusters, fishnet_index
+    return sorted_fishnet_df, results_pipe_clusters, fishnet_index #<-- Nees Allages     
 
 
+### STEP 3 BEFORE OPTIMIZE
 def optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df):
+    
+    
+    def get_highest_priority_cluster(pipe, clusters, sorted_fishnet_df):
+        clusters = [int(cluster) for cluster in clusters]
+        # Extract the metric_com values for the clusters
+        cluster_priorities = sorted_fishnet_df.loc[clusters, 'metric_com']
+        # Return the cluster with the highest metric_com
+        return cluster_priorities.idxmax()
+    
     
     # Convert the clusters to a dictionary with pipes as keys and clusters as values
     pipe_to_clusters = {}
@@ -817,12 +697,6 @@ def optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df)
             if pipe not in pipe_to_clusters:
                 pipe_to_clusters[pipe] = []
             pipe_to_clusters[pipe].append(key)
-
-    def get_highest_priority_cluster(pipe, clusters, metric_com_df):
-        # Extract the metric_com values for the clusters
-        cluster_priorities = metric_com_df.loc[clusters, 'metric_com']
-        # Return the cluster with the highest metric_com
-        return cluster_priorities.idxmax()
 
     # Go through each pipe in df_metrics and determine the highest priority cluster
     for pipe in df_metrics['LABEL']:
@@ -836,11 +710,11 @@ def optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df)
                 for cluster in clusters:
                     if cluster != highest_priority_cluster:
                         results_pipe_clusters[cluster].remove(pipe)
-
-    # Optionally, return updated results_pipe_clusters if needed
+    
     return results_pipe_clusters
 
 
+#### STEP 3 OPTIMIZE 
 def process_pipes_cell_data(path_pipes, path_fishnet, fishnet_index, row_number_to_keep, results_pipe_clusters, pipe_materials):
     # Read pipes data and set coordinate reference system
     pipes_gdf = gpd.read_file(path_pipes).set_crs('EPSG:2100')
@@ -852,7 +726,7 @@ def process_pipes_cell_data(path_pipes, path_fishnet, fishnet_index, row_number_
     cell_index = fishnet_index.iloc[row_number_to_keep - 1]
 
     # Get the list of pipes contained in the specific cell
-    pipes_cell = results_pipe_clusters[str(cell_index)]
+    pipes_cell = results_pipe_clusters[cell_index]
 
     # Create a dataframe containing only the pipes of the specific cell
     pipes_gdf_cell = pipes_gdf[pipes_gdf['LABEL'].isin(pipes_cell)]
@@ -887,7 +761,7 @@ def calculate_investment_timeseries(pipes_gdf_cell, p_span, perc_inc, a_rel):
         p_CP = (0.0005066289 * p_diam**2 + 0.2041100332 * p_diam + 212.9637728607) * 1000
         p_Cr = 1.3 * (p_diam / 304.8)**0.62 * 800
 
-        t_res = single_opt_age(p_id, p_age, p_diam, p_CP, p_Cr, p_span)
+        t_res = single_opt_age(p_id, p_age, p_diam, p_CP, p_Cr, p_span) ################
         pipe_table_trep.loc[i, 't_rep'] = t_res[0]
         pipe_table_trep.loc[i, 'LCC_min'] = t_res[1]
 
@@ -913,7 +787,7 @@ def single_opt_age(pipe_id, pipe_age, pipe_diam, CP, Cr, time_span):
     # pipe_id: the id of the pipe
     # pipe_age: the pipe age at the beginning of the planning period (years)
     # pipe_diam: the pipe diameter (mm)
-    # CP:the pipe replacement cost (€/km)
+    # CP: the pipe replacement cost (€/km)
     # Cr: the pipe repair cost (€/failure)
 
     #create empty data frame containing the necessary columns
@@ -933,8 +807,8 @@ def single_opt_age(pipe_id, pipe_age, pipe_diam, CP, Cr, time_span):
     t_star = pd.to_numeric(p_df['LCC'], downcast='float').idxmin()
     #return optimal replacement time for single pipe
     return t_star, p_df['LCC'].min()
-   
-    
+
+
 # Create function to find the ideal LCC of a single pipe at time t
 def single_opt_lcc(pipe_id, pipe_age, pipe_diam, CP, Cr,time_span, t):
     # pipe_id: the id of the pipe
@@ -958,9 +832,11 @@ def single_opt_lcc(pipe_id, pipe_age, pipe_diam, CP, Cr,time_span, t):
         p_df.loc[i, 'CR'] = p_df.loc[i, 'SFr/t'] * Cr
         p_df.loc[i, 'LCC'] = p_df.loc[i, 'CI'] + p_df.loc[i, 'CR']
 
-    return p_df.loc[t, 'LCC']        
+    return p_df.loc[t, 'LCC']
 
 
+# Create function to find the ideal LCC of the whole network when an array
+# containing the single pipe replacement time is given:
 def lcc_tot_net(repl_time_array, pipe_table, time_span):
     t_rep_count = 0
     lcc_tot = 0
@@ -980,7 +856,7 @@ def lcc_tot_net(repl_time_array, pipe_table, time_span):
 
         t_rep_count =  t_rep_count + 1
 
-    return  lcc_tot    
+    return  lcc_tot
 
 
 #Create function to calculate the single pipe life cycle costs data frame when pipe is replaced at time t_rep
@@ -1007,11 +883,10 @@ def single_opt_age_rep(pipe_id, pipe_age, pipe_diam, CP, Cr, time_span, t_rep):
         p_df.loc[i, 'SFr/t'] = p_df['Fr'].loc[:i].sum()/i
         p_df.loc[i, 'CR'] = p_df.loc[i, 'SFr/t'] * Cr
         p_df.loc[i, 'LCC'] = p_df.loc[i, 'CI'] + p_df.loc[i, 'CR']
-    
     #return cost data frame
     return p_df
-    
-    
+
+
 def investment_series(repl_time_array, pipe_table, p_span):
     # repl_time_array: array containing the replacement time for each pipe
     # pipe_table: data frame containing the pipe data
@@ -1036,8 +911,8 @@ def investment_series(repl_time_array, pipe_table, p_span):
     lcc_series = lcc_table.sum(axis=1)
 
     return lcc_series, lcc_table
- 
-    
+
+
 def check_items_in_key(dictionary, fishnet_index, row_number_to_keep) -> Tuple[str, bool]:
     try:
         # Attempt to obtain cell_index
@@ -1049,8 +924,6 @@ def check_items_in_key(dictionary, fishnet_index, row_number_to_keep) -> Tuple[s
         # Handle other potential errors
         return f"Προέκυψε σφάλμα: {e}", False
 
-    cell_index = str(cell_index)
-
     # Check if the cell_index exists in the dictionary
     if cell_index not in dictionary:
         return f"Το κελί '{cell_index}' δεν υπάρχει.", False #δεν υπαρχει 
@@ -1059,41 +932,19 @@ def check_items_in_key(dictionary, fishnet_index, row_number_to_keep) -> Tuple[s
     else:
         number = len(dictionary[cell_index])
         return f"Το κελί '{cell_index}' περιέχει '{number}' αγωγούς.", True #προχωραμε 
-        
-
-def manipulate_opt_results(edges, X, F, pipe_table_trep, pipes_gdf_cell):
-    # Simulate a Pareto front for demonstration
-    f1_values = F[:,0]
-    f2_values = F[:,1]
-
-    kn = KneeLocator(f1_values, f2_values, curve='convex', direction='decreasing')
-
-    # Get the index of the knee point
-    ind_opt = next((i for i, val in enumerate(f1_values) if val == kn.knee), None)
-
-    # Get the optimal X values
-    X_opt = X[ind_opt,:]
-    
-    # Return a shapefile which contains t* and t_opt
-    pipes_gdf_cell['t_star'] = pipe_table_trep['t_rep']
-    pipes_gdf_cell['t_opt'] = X_opt
-    pipes_gdf_cell_merged = pd.merge(pipes_gdf_cell, edges[[ 'LABEL', 'geometry']], on='LABEL', how='left')
-    pipes_gdf_cell_merged = gpd.GeoDataFrame(pipes_gdf_cell_merged, geometry='geometry')
-    pipes_gdf_cell_merged = pipes_gdf_cell_merged.set_crs('EPSG:2100')
-    
-    return pipes_gdf_cell_merged
 
 
 # Define the optimization problem
 class MyProblem(ElementwiseProblem):
-    def __init__(self, pipe_table_trep, p_span, LLCCn, xl, xu):
-        super().__init__(n_var=len(pipe_table_trep.index), n_obj=2, xl=xl, xu=xu)
+
+    def __init__(self,pipe_table_trep, xl, xu, p_span, LLCCn):
         self.pipe_table_trep = pipe_table_trep
         self.p_span = p_span
         self.LLCCn = LLCCn
-        self.xl = xl
-        self.xu = xu
-
+        super().__init__(n_var=len(pipe_table_trep.index),
+                         n_obj=2,
+                         xl=xl,
+                         xu=xu)
 
     def _evaluate(self, x, out, *args, **kwargs):
 
@@ -1115,9 +966,30 @@ class MyProblem(ElementwiseProblem):
         out["F"] = [f1, f2]
 
 
-# PART 4 functions
+def manipulate_opt_results(edges, X, F, pipe_table_trep, pipes_gdf_cell):
+    # Simulate a Pareto front for demonstration
+    f1_values = F[:,0]
+    f2_values = F[:,1]
+
+    kn = KneeLocator(f1_values, f2_values, curve='convex', direction='decreasing')
+
+    # Get the index of the knee point
+    ind_opt = next((i for i, val in enumerate(f1_values) if val == kn.knee), None)
+
+    # Get the optimal X values
+    X_opt = X[ind_opt,:]
+    # Return a shapefile which contains t* and t_opt
+    
+    pipes_gdf_cell['t_star'] = pipe_table_trep['t_rep']
+    pipes_gdf_cell['t_opt'] = X_opt
+    pipes_gdf_cell_merged = pd.merge(pipes_gdf_cell, edges[[ 'LABEL', 'geometry']], on='LABEL', how='left')
+    pipes_gdf_cell_merged = gpd.GeoDataFrame(pipes_gdf_cell_merged, geometry='geometry')
+    pipes_gdf_cell_merged = pipes_gdf_cell_merged.set_crs('EPSG:2100')
+    
+    return pipes_gdf_cell_merged
 
 
+#### STEP 4 
 def create_subgraph_from_threshold(gdf_cell_path, choose_option, filter_list, figsize=(10, 10), line_width=3):
     """
     Creates a subgraph from the edges with 'opt_time' less than or equal to the threshold.
@@ -1148,6 +1020,22 @@ def create_subgraph_from_threshold(gdf_cell_path, choose_option, filter_list, fi
         subgraph = momepy.gdf_to_nx(red_edges_df, approach='primal')
     
     red_edges_df = red_edges_df.drop(['mm_len','node_start','node_end'],axis=1)
+    
+    # Plot setup
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plotting edges with opt_time < threshold in red
+    red_edges_df.plot(ax=ax, linewidth=line_width, color='red')
+
+    # Adding basemap
+    ctx.add_basemap(ax, crs=edges.crs.to_string(), source=ctx.providers.CartoDB.Positron)
+
+    # Title and axis off
+    ax.set_title("Replacement for selected pipes")
+    ax.axis('off')
+
+    # Show plot
+    plt.plot()
 
     return subgraph, red_edges_df
 
@@ -1230,5 +1118,182 @@ def export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under,
     output_string = sentence_1 +'\n\n'+ sentence_2 +'\n\n'+ df_string + '\n\n' + sentence_3 + '\n\n' + sentence_4
     
     # Write the concatenated string to a text file
-    with open(filename, 'w', encoding='utf-8') as file:
+    with open(filename, 'w') as file:
         file.write(output_string)
+
+
+def main():
+    ##### STEP 1 
+    # Usage:
+    # Load WDN shapefile in the correct format
+    shp_path = r'C:\\Users\\Nikos\\Dropbox\\EYDAP_Asset Management\\Calcs\\WP2\\shapefiles\\Pipes_WG_export.shp'
+
+    # Define weights and process shapefile
+    weight_closeness = 1/3
+    weight_betweenness = 1/3
+    weight_bridge = 1/3
+
+    # Path to save the 'df_metrics' DataFrame, making it visible to the user.
+    output_path = r'C:\\Users\\Nikos\\Dropbox\\EYDAP_Asset Management\\Calcs\\WP2\\study_results_v1\\'
+    os.makedirs(output_path, exist_ok=True)
+    os.chdir(output_path)
+
+    # Process shapefile and save df_metrics
+    gdf, G, nodes, edges, df_metrics = process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path)
+                  
+    # Example usage:
+    # Specify the metrics to plot
+    plot_metric = ['closeness', 'betweenness', 'bridge','composite']  # Choose a list adding any of 'closeness', 'betweenness', 'bridge', or 'composite'
+
+    # True for plotting, False for saving the PNGs
+    plot_or_save = False
+
+    # Call the function with your parameters
+    plot_metrics(gdf, G, nodes, edges, plot_metric, 15, plot_or_save, output_path)
+
+    # Save the geodataframe as shapefile
+    save_edge_gdf_shapefile(edges,'Pipes_WG_export_with_metrics.shp')    
+
+    ########## STEP 2 
+    pipe_shapefile_path = r"C:\Users\Nikos\Dropbox\EYDAP_Asset Management\Calcs\WP2\shapefiles\Pipes_WG_export_with_metrics.shp"
+    failures_shapefile_path = r"C:\Users\Nikos\Dropbox\EYDAP_Asset Management\Calcs\WP2\shapefiles\Vlaves_Combined.shp"
+    weight_avg_combined_metric = 0.5
+    weight_failures = 0.5
+    lower_bound_cell = 100
+    upper_bound_cell = 1000
+
+    from datetime import datetime
+    import pytz
+
+    # Define the GMT+2 timezone
+    gmt_greece = pytz.timezone('Etc/GMT-2')
+
+    # Get the current date and time
+    timestamp = datetime.now(gmt_greece).strftime("%Y%m%d_%H%M%S")
+    output_path_fishnet = 'Fishnet_Grids'    #_{timestamp}'
+    os.makedirs(output_path_fishnet, exist_ok=True)
+
+    results, best_square_size = spatial_autocorrelation_analysis(pipe_shapefile_path, failures_shapefile_path, lower_bound_cell, upper_bound_cell, weight_avg_combined_metric, weight_failures, output_path_fishnet)
+
+    ####### STEP 2B
+    select_square_size = best_square_size ## εδώ ο χρήστης επιλέγει αν θέλει να κρατήσει το best_square_size ή να βάλει ένα δικό του.
+
+    sorted_fishnet_df, results_pipe_clusters, fishnet_index = local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path_fishnet) ##same output path with Lisa analysis (1)
+
+    ###### STEP 3A - BEFORE OPTIMIZE
+    # Define which pipes are contained in each cell of the grid (Part 3.1)
+    results_pipe_clusters = optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df)
+
+    # Read the pipe shapefile which was created in part 1 and exported in the main folder 
+    path_pipes = r"C:\Users\Nikos\Dropbox\EYDAP_Asset Management\Calcs\WP2\study_results\Pipes_WG_export_with_metrics.shp"
+
+    # Read the sorted fishnet shapefile
+    path_fishnet = output_path_fishnet +'/' +str(select_square_size) + '_fishnets_sorted.shp'
+
+    # Create a folder containig the optimization results
+    output_path_all_cells = 'Cell_optimization_results'
+    os.makedirs(output_path_all_cells, exist_ok=True)
+    
+    #-----------LOOP-----------
+
+    #Keep the n row of the fishnet gdf
+    # Define the row number you want to keep (e.g., row 1)
+    row_number_to_keep = 1
+    message = check_items_in_key(results_pipe_clusters, fishnet_index, row_number_to_keep) # έλεγχος αν υπάρχουν αγωγοί σε αυτό το κελί
+    print(message)
+
+    # Create a folder for the specific cell 
+    output_path_single_cell = f'Cell_optimization_results/Cell_Priority_{row_number_to_keep}'
+    os.makedirs(output_path_single_cell, exist_ok=True)
+
+    # Create a dictionary of the pipe age per material
+    # Εδώ πρέπει να βρίσκει τα μοναδικά υλικά από το df_metrics και να γυρνάει 
+    # στο χρήστη μία λίστα με αυτά για να συμπληρώσει την ηλικία τους
+    unique_pipe_materials = df_metrics['MATERIAL'].unique()
+    pipe_materials = {
+        'Asbestos Cement': 50,
+        'Steel': 30,
+        'PVC': 30,
+        'HDPE': 12, 
+        'Cast iron':30
+    }
+
+    # Insert lifespan of contract work 
+    p_span = 10 # years
+
+    # allowable time span relaxation
+    a_rel = 3 # years # check oti einai mikrotero apo to p_span
+
+    # Run functions
+    pipes_gdf_cell = process_pipes_cell_data(path_pipes, path_fishnet, fishnet_index, row_number_to_keep, results_pipe_clusters, pipe_materials)
+
+    pipe_table_trep, LLCCn, ann_budg, xl, xu = calculate_investment_timeseries(pipes_gdf_cell, p_span, 50, a_rel)
+
+    #### STEP 3B OPTIMIZATION
+
+    number_of_pipes = pipe_table_trep.count()[0]
+
+    pop_size = int(round((7.17*number_of_pipes - 1.67),-1)) # linear equation going through (10,70) and (70,500)
+    n_gen = int(round((1.33*number_of_pipes + 6.67),-1)) # linear equation going through (70,100) and (10,20)
+    n_offsprings = int(max(round((pop_size/5),-1),5))
+
+    problem = MyProblem(pipe_table_trep, xl, xu, p_span, LLCCn)
+
+    algorithm = NSGA2(
+        pop_size= pop_size, 
+        n_offsprings= n_offsprings,
+        sampling=IntegerRandomSampling(),
+        crossover=SBX(prob=0.9, eta=15, repair=RoundingRepair()),
+        mutation=PM(eta=20, repair=RoundingRepair()),
+        eliminate_duplicates=True
+    )
+
+    res = minimize(problem,
+                   algorithm,
+                   seed=1,
+                   termination=('n_gen', n_gen), ########################change
+                   save_history=True,
+                   verbose=True)
+
+    X = res.X
+    F = res.F
+
+    pipes_gdf_cell_merged = manipulate_opt_results(edges, X, F, pipe_table_trep, pipes_gdf_cell)
+    pipes_gdf_cell_merged.to_file(output_path_single_cell +'/Priority_' +str(row_number_to_keep) +'_cell_optimal_replacement.shp')
+
+    
+   ###### STEP 4
+   # το shapefile που δημιουργείται στο βήμα 3 
+    gdf_cell_path = f'Cell_optimization_results/Cell_Priority_{row_number_to_keep}' +'/Priority_' +str(row_number_to_keep) +'_cell_optimal_replacement.shp'
+
+
+    #----LOOP---- για να παράγονται shapefiles (με τα συνοδευομενα τους txts) μέσα στον ίδιο φάκελο σύμφωνα με 
+    # τις διαφορετικές επιλογές χρήστη (π.χ. άλλους χρόνους, διαφορετικά checkboxes etc)
+
+    # επιλογή χρήστη, πάει με χρόνους ή πάει με τα checkboxes?
+    # μεταβλητή απόφασης, True αν πάει με χρονους, False αν πάει με checkboxes 
+    choose_option = True 
+
+    if choose_option:
+       # Αν πάει με χρόνους τότε
+       low_time = 1 # ακέραιος από 1 μέχρι p_span - 1 
+       up_time = 3 # ακέραιος από 2 μέχρι p_span 
+       filter_list = [low_time, up_time] # μοναδική συνθήκη το low_time να είναι μικρότερο από το up_time 
+    else:
+       # Αν πάει με checkboxes τότε να του βγάζει το dataframe 'pipes_gdf_cell' το οποίο είναι output από τη συνάρτηση process_pipes_cell_data του part 3
+       filter_list = [1577, 1707, 1313, 1376, 1358, 1734]
+
+    # input χρήστη "Ελάχιστο μήκος εργολαβίας". άδειο κελί κ να γράφει όποια τιμή θέλει. Απλά να είναι σε μέτρα η μονάδα μέτρησης. 
+    distance = 100 
+
+    # use functions 
+    red_subgraph, red_edges_df = create_subgraph_from_threshold(gdf_cell_path, choose_option, filter_list)
+
+    red_edges_df, results_df, overall_weighted_average_cost, total_length_under, accept_condition, perc, total_length_all = analyze_graph(red_subgraph, red_edges_df, distance, 0.9)
+
+    # Για το export του shapefile, να διαλέγει όνομα ο χρήστης
+    shp_name = 'custom_selection_replacement_v2'
+    red_edges_df.to_file(f'Cell_optimization_results/Cell_Priority_{row_number_to_keep}//{shp_name}.shp')
+    # also export a text file containing useful info to the user. same file name and some folder to save 
+    text_filename = f'Cell_optimization_results/Cell_Priority_{row_number_to_keep}/{shp_name}.txt'
+    export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under, row_number_to_keep, shp_name, overall_weighted_average_cost, accept_condition, perc, total_length_all, distance, text_filename)

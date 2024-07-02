@@ -290,7 +290,7 @@ class PipeReplacementTool:
         self.pipe_materials = metadata.get("pipe_materials")
         
         self.edges = gpd.read_file(os.path.join(self.project_folder, metadata["edges"])) if metadata.get("edges") else None
-        self.df_metrics = pd.read_csv(os.path.join(self.project_folder, metadata["df_metrics"])) if metadata.get("df_metrics") else None
+        self.df_metrics = pd.read_csv(os.path.join(self.project_folder, metadata["df_metrics"]), index_col=0) if metadata.get("df_metrics") else None
         
         self.step2_output_path = metadata.get("step2_output_path")
         self.best_square_size = metadata.get("best_square_size")
@@ -301,17 +301,18 @@ class PipeReplacementTool:
         self.step2_finished = metadata.get("step2_finished")
         
         self.select_square_size = metadata.get("select_square_size")
-        self.sorted_fishnet_df = pd.read_csv(os.path.join(self.project_folder, metadata["sorted_fishnet_df"])) if metadata.get("sorted_fishnet_df") else None
+        self.sorted_fishnet_df = pd.read_csv(os.path.join(self.project_folder, metadata["sorted_fishnet_df"]), index_col=0) if metadata.get("sorted_fishnet_df") else None
         self.results_pipe_clusters = metadata.get("results_pipe_clusters")
-        self.fishnet_index = pd.read_csv(os.path.join(self.project_folder, metadata["fishnet_index"])) if metadata.get("fishnet_index") else None
-        
-        if self.fishnet_index is not None:
-            # If fishnet_index is a DataFrame, convert it to a Series
-            if isinstance(self.fishnet_index, pd.DataFrame):
-                self.fishnet_index = self.fishnet_index.squeeze()
+        self.fishnet_index = pd.read_csv(os.path.join(self.project_folder, metadata["fishnet_index"]), index_col=0) if metadata.get("fishnet_index") else None
         
         self.path_fishnet = metadata.get("path_fishnet")
         self.step2b_finished = metadata.get("step2b_finished")
+        
+        if self.fishnet_index is not None:
+            self.fishnet_index = self.fishnet_index.squeeze()
+        
+        if self.results_pipe_clusters:
+            self.results_pipe_clusters = {int(k): v for k, v in self.results_pipe_clusters.items()}
         
         self.landing_page_frame.destroy()
         self.main_page()
@@ -361,8 +362,8 @@ class PipeReplacementTool:
         
         # Save the fishnet dataframe as a csv file
         if self.step2b_finished:
-            self.sorted_fishnet_df.to_csv(os.path.join(self.project_folder, scenario_info['sorted_fishnet_df']), index=False)                
-            self.fishnet_index.to_csv(os.path.join(self.project_folder, scenario_info['fishnet_index']), index=False)
+            self.sorted_fishnet_df.to_csv(os.path.join(self.project_folder, scenario_info['sorted_fishnet_df']), index=True)                
+            self.fishnet_index.to_csv(os.path.join(self.project_folder, scenario_info['fishnet_index']), index=True)
         
         messagebox.showinfo("Success", "Scenario saved successfully")
 
@@ -749,7 +750,9 @@ class PipeReplacementTool:
             self.edges = edges
             
             plot_metrics(gdf, G, nodes, edges, ["closeness", "betweenness", "bridge", "composite"], 8, False, output_path)
+            
             output_path = os.path.join(output_path, "shp_with_metrics", "Pipes_WG_export_with_metrics.shp")
+            
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             save_edge_gdf_shapefile(edges, output_path)
             
@@ -821,7 +824,6 @@ class PipeReplacementTool:
             self.combined_metric_weight = 1 - combined_metric_failures
             self.failures_weight = combined_metric_failures
             
-            bounds = (self.cell_lower_bound, self.cell_upper_bound)
             os.makedirs(os.path.join(self.project_folder, "Fishnet_Grids"), exist_ok=True)
             
             self.step2_output_path = os.path.join(self.project_folder, "Fishnet_Grids", "")
@@ -929,6 +931,9 @@ class PipeReplacementTool:
         
         
         def optimize_cell():
+            os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results"), exist_ok=True)
+            self.results_pipe_clusters = optimize_pipe_clusters(self.results_pipe_clusters, self.df_metrics, self.sorted_fishnet_df)
+        
             cell_index = cell_index_entry.get()
             if not cell_index:
                 info_label.config(text="Please insert a cell index", fg=self.danger_bg)
@@ -955,6 +960,7 @@ class PipeReplacementTool:
 
             # Run functions
             pipes_gdf_cell = process_pipes_cell_data(self.topological_analysis_result_shapefile, self.path_fishnet, self.fishnet_index, cell_index, self.results_pipe_clusters, self.pipe_materials)
+            
             pipe_table_trep, LLCCn, ann_budg, xl, xu = calculate_investment_timeseries(pipes_gdf_cell, contract_lifespan, 50, time_relaxation)
 
             # Run optimization
@@ -965,7 +971,9 @@ class PipeReplacementTool:
             pop_size = int(round((7.17 * number_of_pipes - 1.67), -1))  # linear equation going through (10,70) and (70,500)
             n_gen = int(round((1.33 * number_of_pipes + 6.67), -1))  # linear equation going through (70,100) and (10,20)
             n_offsprings = int(max(round((pop_size / 5), -1), 5))
-            problem = MyProblem(pipe_table_trep, contract_lifespan, LLCCn, xl, xu)
+            
+            problem = MyProblem(pipe_table_trep, xl, xu, contract_lifespan, LLCCn)
+            
             algorithm = NSGA2(pop_size=pop_size, n_offsprings=n_offsprings, sampling=IntegerRandomSampling(), crossover=SBX(prob=0.9, eta=15, repair=RoundingRepair()), mutation=PM(eta=20, repair=RoundingRepair()), eliminate_duplicates=True)
             
             info_label.config(text=f"Optimizing cell {cell_index}. This may take a while.", fg=self.fg)
@@ -977,7 +985,10 @@ class PipeReplacementTool:
             print("Optimization finished. You can close this window and proceed to the next step.")
             X = res.X
             F = res.F
-
+            
+            print(X, type(X))
+            print(F, type(F))
+            
             pipes_gdf_cell_merged = manipulate_opt_results(self.edges, X, F, pipe_table_trep, pipes_gdf_cell)  # Run function for making final geodataframe
 
             pre_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}")
@@ -1000,9 +1011,6 @@ class PipeReplacementTool:
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
-
-        self.results_pipe_clusters = optimize_pipe_clusters(self.results_pipe_clusters, self.df_metrics, self.sorted_fishnet_df)
-        os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results"), exist_ok=True)
 
         pipe_materials_label = tk.Label(window_frame, text=f"Insert pipe materials and their lifespan", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=2)
