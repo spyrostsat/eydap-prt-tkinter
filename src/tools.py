@@ -550,21 +550,14 @@ def optimal_fishnet(pipe_shapefile_path, failures_shapefile_path, weight_avg_com
     return fishnet_failures, pipe_gdf
 
 
-def local_spatial_autocorrelation(pipe_shapefile_path,
-                                failures_shapefile_path,
-                                weight_avg_combined_metric,
-                                weight_failures,
-                                select_square_size,
-                                output_path,):
-    
-    fishnet_failures, pipe_gdf = optimal_fishnet(
-        pipe_shapefile_path=pipe_shapefile_path,
-        failures_shapefile_path=failures_shapefile_path,
-        weight_avg_combined_metric=weight_avg_combined_metric,
-        weight_failures=weight_failures,
-        select_square_size=select_square_size,
-        output_path=output_path,)
+def local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path):
 
+    fishnet_failures, pipe_gdf = optimal_fishnet(pipe_shapefile_path=pipe_shapefile_path, failures_shapefile_path=failures_shapefile_path, weight_avg_combined_metric=weight_avg_combined_metric, weight_failures=weight_failures, select_square_size=select_square_size, output_path=output_path)
+    # June changes for LISA MAP
+    fishnet_failures_sorted = fishnet_failures.sort_values(by='weighted_avg', ascending=False).reset_index(drop=True)
+    fishnet_failures_sorted['ID'] = range(1, len(fishnet_failures_sorted) + 1)
+    fishnet_failures_sorted = fishnet_failures.merge(fishnet_failures_sorted[['weighted_avg', 'ID']], on='weighted_avg')
+    
     # Perform the local spatial autocorrelation analysis
     y = fishnet_failures['weighted_avg']
     w = lps.weights.Queen.from_dataframe(fishnet_failures)
@@ -598,6 +591,16 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
     lisa_cluster(moran_local, fishnet_failures, p=1,  ax=ax, legend=True,
                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"})
     fishnet_failures.boundary.plot(ax=ax)
+    
+    # Annotate each grid cell with its ID
+    for idx, row in fishnet_failures_sorted.iterrows():
+        # Get the ID value
+        id_value = row['ID']
+        # Get the centroid of the grid cell
+        centroid = row.geometry.centroid
+        # Annotate the ID at the centroid  
+        ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=10, color='black')
+    
     plt.title('LISA Cluster Map for average criticality metric per fishnet cell', fontsize = 18)
     plt.tight_layout()
     plt.savefig(output_path + '/' + str(select_square_size) + '_' +'final_lisa_cluster_map.png')
@@ -632,7 +635,7 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
     # Spatially join the fishnet grid cells and pipes
     # First, add an explicit 'fishnet_index' column to the fishnet_failures GeoDataFrame
     fishnet_failures['fishnet_index'] = fishnet_failures.index
-
+    
     # Now perform the spatial join using this new 'fishnet_index' column
     spatial_join = gpd.sjoin(fishnet_failures, pipe_gdf, predicate='intersects')
 
@@ -649,7 +652,6 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
 
     # final details
     fishnet_index = sorted_fishnet_df['fishnet_index'] #<-- Nees allages
-
     sorted_fishnet_df['failures'] = sorted_fishnet_df['failures'].round(0)
     sorted_fishnet_df['avg_combined_metric'] = sorted_fishnet_df['avg_combined_metric'].round(3)
     sorted_fishnet_df['weighted_avg'] = sorted_fishnet_df['weighted_avg'].round(3)
@@ -668,7 +670,7 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
     sorted_fishnet_gdf = gpd.GeoDataFrame(sorted_fishnet_df).set_crs('EPSG:2100')
     sorted_fishnet_gdf.to_file(output_path +'/' +str(select_square_size) + '_fishnets_sorted.shp')
 
-    return sorted_fishnet_df, results_pipe_clusters, fishnet_index #<-- Nees Allages     
+    return sorted_fishnet_df, results_pipe_clusters, fishnet_index
 
 
 ### STEP 3

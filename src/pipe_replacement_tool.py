@@ -15,6 +15,7 @@ import os
 from src.tools import *
 import ctypes
 import platform
+import datetime
 import json
 import warnings
 from typing import List
@@ -581,8 +582,8 @@ class PipeReplacementTool:
             else:
                 self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
         
-        # Add the bottom frame widgets
-        tk.Label(bottom_frame, text="Message Window", fg=self.fg, bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=30)
+        # Add the bottom frame widget
+        tk.Label(bottom_frame, text=f"Pipe Replacement Tool (v.1.0)      © {datetime.datetime.now().year} Urban Water Management & Hydroinformatics Group", fg="#444444", bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
 
     
     def update_right_frame(self):
@@ -1094,4 +1095,3 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=2)
-    
