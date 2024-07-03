@@ -68,9 +68,9 @@ def extract_optimized_cells_data(base_folder: str):
 	
 	for folder in inner_folders:
 		folder_path = os.path.join(base_folder, folder)
-		# Find the .shp file inside the folder
+		# Find the .shp file inside the folder  
 		for file in os.listdir(folder_path):
-			if file.endswith('.shp'):
+			if file == f"Priority_{folder_path.split('_')[-1]}_cell_optimal_replacement.shp":
 				shp_path = os.path.join(folder_path, file)
 				break
 		

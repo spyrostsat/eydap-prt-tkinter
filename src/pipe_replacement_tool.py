@@ -437,6 +437,12 @@ class PipeReplacementTool:
             
             if selected_item == 'Optimized cells' and self.step3_finished:
                 self.update_middle_frame('optimized_cells')
+                
+            if selected_item == "Decision support tool for pipe replacement":
+                if not self.step3_finished:
+                    messagebox.showerror("Error", "You need to run a cell optimization first")
+                    return
+                self.decision_support_tool()
             
         except IndexError:
             pass
@@ -463,7 +469,8 @@ class PipeReplacementTool:
     def handle_optimized_cell_click(self, pipe):
         pipe_label = pipe.data[0]
         t_opt = pipe.data[1]
-        messagebox.showinfo(title=f"Pipe: {pipe_label}", message=f"Replacement Year: {t_opt}")
+        cell = pipe.data[2]
+        messagebox.showinfo(title=f"Pipe: {pipe_label}    Cell: {cell}", message=f"Replacement Year: {t_opt}")
 
 
     def landing_page(self):
@@ -648,9 +655,10 @@ class PipeReplacementTool:
             pipes_colors = generate_distinct_colors(min_time, max_time)
 
             for key, value in data.items():
+                cell_number = key.split("_")[-1]
                 for index, line_path in enumerate(value['pipes_lines_paths']):
                     pipe_color = pipes_colors[str(value['attributes']['t_opt'][index])]
-                    map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['LABEL'][index], value['attributes']['t_opt'][index]), command=self.handle_optimized_cell_click)
+                    map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['LABEL'][index], value['attributes']['t_opt'][index], cell_number), command=self.handle_optimized_cell_click)
 
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
@@ -1095,3 +1103,183 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=2)
+
+
+    def decision_support_tool(self):
+
+
+        def browse() -> None:
+            filename = filedialog.askopenfilename(filetypes=[("Shapefiles", "*.shp")])
+            if filename:
+                cell_entry.delete(0, tk.END)
+                cell_entry.insert(tk.END, filename)
+        
+
+        def cell_click():
+            nonlocal cell_shp_path
+            
+            cell_shp_path = cell_entry.get()
+
+            if not cell_shp_path or not cell_shp_path.endswith(".shp") or not os.path.exists(cell_shp_path):
+                messagebox.showerror("Error", "Please select a valid shapefile")
+                return
+            
+            # Empty the window and add two new buttons
+            for widget in window_frame.winfo_children():
+                widget.destroy()
+            
+            time_button = tk.Button(window_frame, text="Proceed with time", background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=time_click)
+            time_button.pack(side='left', padx=10)
+            
+            pipes_button = tk.Button(window_frame, text="Proceed with pipe IDs", background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=pipes_click)
+            pipes_button.pack(side='right', padx=10)
+            
+            window.update()
+
+
+        def time_click():
+            nonlocal proceedTime, start_time_entry, end_time_entry
+            
+            proceedTime = True
+            for widget in window_frame.winfo_children():
+                widget.destroy()
+
+            start_time_label = tk.Label(window_frame, text="Start time", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            start_time_label.grid(row=0, column=0, padx=5, pady=20)
+            start_time_entry = tk.Entry(window_frame)
+            start_time_entry.grid(row=0, column=1, padx=5, pady=20)
+            
+            end_time_label = tk.Label(window_frame, text="End time", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            end_time_label.grid(row=1, column=0, padx=5, pady=20)
+            end_time_entry = tk.Entry(window_frame)
+            end_time_entry.grid(row=1, column=1, padx=5, pady=20)
+
+            # Add the 'Run' button to the window
+            run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_click)
+            run_button.grid(row=2, column=0, padx=5, pady=10, columnspan=2)
+
+
+        def pipes_click():
+            nonlocal proceedTime
+            
+            proceedTime = False
+            for widget in window_frame.winfo_children():
+                widget.destroy()
+            
+            # TODO: Not implemented yet
+        
+
+
+        def run_click():
+            nonlocal min_distance_entry, output_shp_name_entry, start_time, end_time
+            
+            if proceedTime:
+                start_time = start_time_entry.get()
+                end_time = end_time_entry.get()
+                
+                if not start_time or not end_time:
+                    messagebox.showerror("Error", "Please insert start and end times correctly")
+                    return
+                try:
+                    start_time = float(start_time)
+                    end_time = float(end_time)
+                    
+                except ValueError:
+                    messagebox.showerror("Error", "Please insert start and end times correctly")
+                    return
+            
+            else:
+                print("Pipes")
+                print("Not implemented yet")
+
+            for widget in window_frame.winfo_children():
+                widget.destroy()
+
+            min_distance_label = tk.Label(window_frame, text="Contract Work Min Distance (m)", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            min_distance_label.grid(row=0, column=0, padx=5, pady=20)
+            min_distance_entry = tk.Entry(window_frame, width=25)
+            min_distance_entry.grid(row=0, column=1, padx=5, pady=20)
+
+            output_shp_name_label = tk.Label(window_frame, text="Output shapefile name", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            output_shp_name_label.grid(row=1, column=0, padx=5, pady=20)
+            output_shp_name_entry = tk.Entry(window_frame, width=25)
+            output_shp_name_entry.grid(row=1, column=1, padx=5, pady=20)
+            output_shp_name_entry.insert(0, "custom_selection_replacement_v2")
+
+            run_button = tk.Button(window_frame, text="Calculate", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=calculate_click)
+            run_button.grid(row=2, column=0, padx=5, pady=10, columnspan=2)
+        
+        
+        def calculate_click():
+            if not min_distance_entry.get():
+                messagebox.showerror("Error", "Please insert a valid minimum distance")
+                return
+            
+            try:
+                min_distance = float(min_distance_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Please insert a valid minimum distance")
+                return
+            
+            if not output_shp_name_entry.get():
+                messagebox.showerror("Error", "Please insert a valid output shapefile name")
+                return
+            else:
+                shp_name = output_shp_name_entry.get()
+
+            row_number_to_keep = cell_shp_path.split("/")[-2].split("_")[-1]
+            if proceedTime:
+                filter_list = [start_time, end_time]
+            else:
+                print("Not implemented yet")
+                return
+
+            # Info label for the user
+            info_label = tk.Label(window_frame, text="Calculating...", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+            info_label.grid(row=3, column=0, padx=5, pady=20, columnspan=2)
+            window.update()
+
+            red_subgraph, red_edges_df = create_subgraph_from_threshold(cell_shp_path, proceedTime, filter_list)
+            red_edges_df, results_df, overall_weighted_average_cost, total_length_under, accept_condition, perc, total_length_all = analyze_graph(red_subgraph, red_edges_df, min_distance, 0.9)
+            
+            shp_file_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{row_number_to_keep}", f"{shp_name}.shp")
+            red_edges_df.to_file(shp_file_path)
+            
+            text_filename = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{row_number_to_keep}", f"{shp_name}.txt")
+            export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under, row_number_to_keep, shp_name, overall_weighted_average_cost, accept_condition, perc, total_length_all, min_distance, text_filename)
+        
+            info_label.config(text="Calculations finished!", fg=self.success_bg)
+            window.update()
+        
+        
+        cell_shp_path = None
+        proceedTime = None
+        start_time_entry = None
+        end_time_entry = None
+        start_time = None
+        end_time = None
+        min_distance_entry = None
+        output_shp_name_entry = None
+        
+        window = tk.Toplevel(self.root)
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        # Center the window
+        window_width = self.screen_width // 3.2
+        window_height = self.screen_height // 2.5
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        cell_label = tk.Label(window_frame, text="Network shapefile")
+        cell_label.grid(row=0, column=0, padx=5, pady=20)
+        cell_entry = tk.Entry(window_frame, width=40)
+        cell_entry.grid(row=0, column=1, padx=5, pady=20)
+        cell_button = tk.Button(window_frame, text="Browse", command=browse)
+        cell_button.grid(row=0, column=2, padx=5, pady=20)
+
+        # Add the 'Run' button to the window
+        run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=cell_click)
+        run_button.grid(row=1, column=0, padx=5, pady=10, columnspan=3)

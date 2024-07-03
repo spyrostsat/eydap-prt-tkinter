@@ -123,13 +123,6 @@ LEFT_MENU = [
 		"completed": False,
 	},
     {
-		"name": "Select group of pipes based on criteria",
-		"step": 5,
-		"leaf": True,
-		"selected": False,
-		"completed": False,
-	},
-    {
 		"name": "Pipe grouping",
 		"step": 5,
 		"leaf": True,
