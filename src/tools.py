@@ -27,9 +27,8 @@ import momepy
 import contextily as ctx
 import matplotlib.colors as mcolors
 
+
 #### STEP1
-
-
 def process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path):
     # Load the shapefile as geodataframe and convert to EPSG 2100
     gdf = gpd.read_file(shp_path)
@@ -457,12 +456,7 @@ def find_best_square_size(results):
     return None
 
 
-def optimal_fishnet(pipe_shapefile_path, 
-                    failures_shapefile_path, 
-                    weight_avg_combined_metric, 
-                    weight_failures, 
-                    select_square_size, 
-                    output_path):
+def optimal_fishnet(pipe_shapefile_path, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path):
 
     pipe_gdf, failures_gdf = read_shapefiles(pipe_shapefile_path, failures_shapefile_path)
 
@@ -650,7 +644,6 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
 
     # Iterate through each group (fishnet cell) and collect the associated pipe labels
     for fishnet_index, group_data in grouped:
-        print(fishnet_index)
         pipe_labels = group_data['LABEL'].tolist()
         results_pipe_clusters[fishnet_index] = pipe_labels
 
@@ -678,7 +671,7 @@ def local_spatial_autocorrelation(pipe_shapefile_path,
     return sorted_fishnet_df, results_pipe_clusters, fishnet_index #<-- Nees Allages     
 
 
-### STEP 3 BEFORE OPTIMIZE
+### STEP 3
 def optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df):
     
     
@@ -714,7 +707,6 @@ def optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df)
     return results_pipe_clusters
 
 
-#### STEP 3 OPTIMIZE 
 def process_pipes_cell_data(path_pipes, path_fishnet, fishnet_index, row_number_to_keep, results_pipe_clusters, pipe_materials):
     # Read pipes data and set coordinate reference system
     pipes_gdf = gpd.read_file(path_pipes).set_crs('EPSG:2100')
@@ -835,8 +827,7 @@ def single_opt_lcc(pipe_id, pipe_age, pipe_diam, CP, Cr,time_span, t):
     return p_df.loc[t, 'LCC']
 
 
-# Create function to find the ideal LCC of the whole network when an array
-# containing the single pipe replacement time is given:
+# Create function to find the ideal LCC of the whole network when an array containing the single pipe replacement time is given:
 def lcc_tot_net(repl_time_array, pipe_table, time_span):
     t_rep_count = 0
     lcc_tot = 0
@@ -859,7 +850,7 @@ def lcc_tot_net(repl_time_array, pipe_table, time_span):
     return  lcc_tot
 
 
-#Create function to calculate the single pipe life cycle costs data frame when pipe is replaced at time t_rep
+# Create function to calculate the single pipe life cycle costs data frame when pipe is replaced at time t_rep
 def single_opt_age_rep(pipe_id, pipe_age, pipe_diam, CP, Cr, time_span, t_rep):
     #create empty data frame containing the necessary columns
     p_df = pd.DataFrame(index=range(1, time_span + 1),

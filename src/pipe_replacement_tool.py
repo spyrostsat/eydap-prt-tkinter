@@ -116,6 +116,7 @@ class PipeReplacementTool:
         self.recent_scenarios = None
         self.network_shapefile_attributes = None
         
+        self.step3_finished = False
         
         self.menuBar = tk.Menu(self.root)
         self.root.config(menu=self.menuBar)
@@ -308,6 +309,8 @@ class PipeReplacementTool:
         self.path_fishnet = metadata.get("path_fishnet")
         self.step2b_finished = metadata.get("step2b_finished")
         
+        self.step3_finished = metadata.get("step3_finished")
+        
         if self.fishnet_index is not None:
             self.fishnet_index = self.fishnet_index.squeeze()
         
@@ -351,7 +354,8 @@ class PipeReplacementTool:
             "results_pipe_clusters": self.results_pipe_clusters,
             "fishnet_index": "fishnet_index.csv" if self.step2b_finished else None,
             "path_fishnet": self.path_fishnet,
-            "step2b_finished": self.step2b_finished
+            "step2b_finished": self.step2b_finished,
+            "step3_finished": self.step3_finished
         }
         with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
             json.dump(scenario_info, f)
@@ -410,7 +414,14 @@ class PipeReplacementTool:
             if selected_item == "LISA results" and self.step2_finished:
                 self.update_middle_frame('lisa', os.path.join(self.step2_output_path, "square_size_comparison_diagram.png"))
             
-            if selected_item == "Risk assessment (Optimal / Selected cell size)" and self.step2_finished:
+            if selected_item == "Risk assessment (Optimal / Selected cell size)":
+                if not self.step2_finished:
+                    messagebox.showerror("Error", "You need to run the risk assessment first")
+                    return
+                if self.step3_finished:
+                    messagebox.showerror("Error", "You have already run the risk assessment for the selected cell size")
+                    return
+                
                 self.selected_cell_size()
             
             if selected_item == 'Criticality map for selected cell size' and self.step2b_finished:
@@ -422,6 +433,9 @@ class PipeReplacementTool:
                     messagebox.showerror("Error", "You need to run the risk assessment first")
                     return
                 self.lcc_optimization()
+            
+            if selected_item == 'Optimized cells' and self.step3_finished:
+                self.update_middle_frame('optimized_cells')
             
         except IndexError:
             pass
@@ -443,6 +457,12 @@ class PipeReplacementTool:
                 damage_desc = self.damages_shapefile_attributes['PERIGRAF__'][i]
                 messagebox.showinfo(f"Damage with ID={damage_id}", f"Reported at: {damage_date}\n\nDescription: {damage_desc}")
                 break
+
+
+    def handle_optimized_cell_click(self, pipe):
+        pipe_label = pipe.data[0]
+        t_opt = pipe.data[1]
+        messagebox.showinfo(title=f"Pipe: {pipe_label}", message=f"Replacement Year: {t_opt}")
 
 
     def landing_page(self):
@@ -590,7 +610,7 @@ class PipeReplacementTool:
         
         if display_type == 'network':
             map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both', padx=50, pady=50)
+            map_widget.pack(expand=True, fill='both')
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
                     
@@ -598,15 +618,44 @@ class PipeReplacementTool:
                 pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
                 map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
         
+            for material, color in MATERIAL_COLORS.items():
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
+                tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+            
         if display_type == 'damages':
             map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both', padx=50, pady=50)
+            map_widget.pack(expand=True, fill='both')
             
             map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
                         
             for index, point in enumerate(self.damages_points):
                 map_widget.set_marker(point[0], point[1], data=int(self.damages_shapefile_attributes['KOD_VLAVIS'][index]), command=self.handle_marker_click)
         
+        if display_type == "optimized_cells":
+            data = extract_optimized_cells_data(os.path.join(self.project_folder, "Cell_optimization_results"))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
+            map_widget.pack(expand=True, fill='both')
+            
+            map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
+            
+            replacement_times: List[int] = []
+            for key, value in data.items():
+                replacement_times.extend([t_opt for t_opt in value['attributes']['t_opt']])
+            
+            min_time = min(replacement_times)
+            max_time = max(replacement_times)
+            pipes_colors = generate_distinct_colors(min_time, max_time)
+
+            for key, value in data.items():
+                for index, line_path in enumerate(value['pipes_lines_paths']):
+                    pipe_color = pipes_colors[str(value['attributes']['t_opt'][index])]
+                    map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['LABEL'][index], value['attributes']['t_opt'][index]), command=self.handle_optimized_cell_click)
+
+            for material, color in pipes_colors.items():
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
+                tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+
+
         if display_type == 'betweeness':
             img = Image.open(args[0])
             img_resized = img.resize((800, 800))
@@ -940,7 +989,7 @@ class PipeReplacementTool:
                 run_button.config(state=tk.NORMAL)
                 return
             
-            cell_index = int(cell_index)  # TODO: Make sure the user has inserted the correct values
+            cell_index = int(cell_index)
             
             pipe_materials_lifespan = {}
             for material_name in self.unique_pipe_materials_names:
@@ -981,13 +1030,8 @@ class PipeReplacementTool:
             window.update()
             
             res = minimize(problem, algorithm, seed=1, termination=('n_gen', 1), save_history=True, verbose=True)
-            
-            print("Optimization finished. You can close this window and proceed to the next step.")
             X = res.X
             F = res.F
-            
-            print(X, type(X))
-            print(F, type(F))
             
             pipes_gdf_cell_merged = manipulate_opt_results(self.edges, X, F, pipe_table_trep, pipes_gdf_cell)  # Run function for making final geodataframe
 
@@ -996,6 +1040,7 @@ class PipeReplacementTool:
             
             info_label.config(text=f"Calculation for Cell {cell_index} is finished.\nContinue with another cell or close the window and proceed.", fg=self.success_bg)
             run_button.config(state=tk.NORMAL)
+            self.step3_finished = True
             window.update()
             self.update_right_frame()
         

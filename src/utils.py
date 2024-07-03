@@ -83,3 +83,45 @@ def read_scenarios_config_file() -> List[Dict]:
         data = []
         
     return data
+
+
+def generate_distinct_colors(start: int, end: int) -> Dict[str, str]:
+    """
+    Generates a dictionary with keys from `start` to `end` and values as distinct hex color codes.
+    
+    :param start: The starting integer value.
+    :param end: The ending integer value.
+    :return: A dictionary with integers as keys and hex color codes as values.
+    """
+    # Predefined list of distinct colors
+    distinct_colors = [
+        "#0000FF",  # Blue
+        "#00FFFF",  # Cyan
+        "#00FF00",  # Lime
+        "#FFFF00",  # Yellow
+        "#FFA500",  # Orange
+        "#FF0000",  # Red
+        "#FF00FF",  # Magenta
+        "#800080",  # Purple
+        "#008000",  # Green
+        "#800000",  # Maroon
+        "#808000",  # Olive
+        "#000080",  # Navy
+        "#008080",  # Teal
+        "#808080",  # Gray
+        "#C0C0C0",  # Silver
+    ]
+    
+    num_colors = len(distinct_colors)
+    num_steps = end - start + 1
+    
+    if num_steps > num_colors:
+        raise ValueError(f"The range [{start}, {end}] requires more than {num_colors} distinct colors.")
+    
+    gradient_dict = {}
+    
+    for i in range(start, end + 1):
+        color_index = (i - start) % num_colors
+        gradient_dict[str(i)] = distinct_colors[color_index]
+    
+    return gradient_dict
