@@ -626,6 +626,7 @@ class PipeReplacementTool:
                 pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
                 map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
         
+            tk.Label(self.middle_frame, text="Pipe Material", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
             for material, color in MATERIAL_COLORS.items():
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
@@ -658,8 +659,9 @@ class PipeReplacementTool:
                 cell_number = key.split("_")[-1]
                 for index, line_path in enumerate(value['pipes_lines_paths']):
                     pipe_color = pipes_colors[str(value['attributes']['t_opt'][index])]
-                    map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['LABEL'][index], value['attributes']['t_opt'][index], cell_number), command=self.handle_optimized_cell_click)
+                    map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['ID'][index], value['attributes']['t_opt'][index], cell_number), command=self.handle_optimized_cell_click)
 
+            tk.Label(self.middle_frame, text="Replacement Year", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
@@ -1160,18 +1162,34 @@ class PipeReplacementTool:
 
 
         def pipes_click():
-            nonlocal proceedTime
+            nonlocal proceedTime, pipe_ids_checkboxes
             
             proceedTime = False
             for widget in window_frame.winfo_children():
                 widget.destroy()
             
-            # TODO: Not implemented yet
-        
-
+            gdf = gpd.read_file(cell_shp_path)
+            gdf.set_crs(epsg=2100, inplace=True)
+            gdf = reproject_shp(gdf)
+            
+            # Read the pipe IDs
+            pipe_ids = list(gdf["ID"].unique())
+            pipe_ids.sort()
+            
+            ids_per_row = 10
+            # Create checkboxes for each pipe ID
+            pipe_ids_checkboxes = {}
+            for index, pipe_id in enumerate(pipe_ids):
+                pipe_ids_checkboxes[pipe_id] = tk.IntVar()
+                new_checkbox = tk.Checkbutton(window_frame, text=pipe_id, variable=pipe_ids_checkboxes[pipe_id], bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+                new_checkbox.grid(row=index // ids_per_row, column=index % ids_per_row, padx=5, pady=5)
+            
+            # Add the 'Run' button to the window
+            run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_click)
+            run_button.grid(row=index+1, column=0, padx=5, pady=10, columnspan=ids_per_row)
 
         def run_click():
-            nonlocal min_distance_entry, output_shp_name_entry, start_time, end_time
+            nonlocal min_distance_entry, output_shp_name_entry, start_time, end_time, selected_pipe_ids
             
             if proceedTime:
                 start_time = start_time_entry.get()
@@ -1189,20 +1207,26 @@ class PipeReplacementTool:
                     return
             
             else:
-                print("Pipes")
-                print("Not implemented yet")
-
+                selected_pipe_ids = []
+                for pipe_id, var in pipe_ids_checkboxes.items():
+                    if var.get():
+                        selected_pipe_ids.append(int(pipe_id))
+                
+                if not selected_pipe_ids:
+                    messagebox.showerror("Error", "Please select at least one pipe")
+                    return
+   
             for widget in window_frame.winfo_children():
                 widget.destroy()
 
             min_distance_label = tk.Label(window_frame, text="Contract Work Min Distance (m)", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
             min_distance_label.grid(row=0, column=0, padx=5, pady=20)
-            min_distance_entry = tk.Entry(window_frame, width=25)
+            min_distance_entry = tk.Entry(window_frame, width=70)
             min_distance_entry.grid(row=0, column=1, padx=5, pady=20)
 
             output_shp_name_label = tk.Label(window_frame, text="Output shapefile name", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
             output_shp_name_label.grid(row=1, column=0, padx=5, pady=20)
-            output_shp_name_entry = tk.Entry(window_frame, width=25)
+            output_shp_name_entry = tk.Entry(window_frame, width=70)
             output_shp_name_entry.grid(row=1, column=1, padx=5, pady=20)
             output_shp_name_entry.insert(0, "custom_selection_replacement_v2")
 
@@ -1231,8 +1255,7 @@ class PipeReplacementTool:
             if proceedTime:
                 filter_list = [start_time, end_time]
             else:
-                print("Not implemented yet")
-                return
+                filter_list = selected_pipe_ids
 
             # Info label for the user
             info_label = tk.Label(window_frame, text="Calculating...", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
@@ -1258,6 +1281,8 @@ class PipeReplacementTool:
         end_time_entry = None
         start_time = None
         end_time = None
+        pipe_ids_checkboxes = None
+        selected_pipe_ids = None
         min_distance_entry = None
         output_shp_name_entry = None
         
@@ -1267,15 +1292,15 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 3.2
-        window_height = self.screen_height // 2.5
+        window_width = self.screen_width // 2
+        window_height = self.screen_height // 3
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
 
         cell_label = tk.Label(window_frame, text="Network shapefile")
         cell_label.grid(row=0, column=0, padx=5, pady=20)
-        cell_entry = tk.Entry(window_frame, width=40)
+        cell_entry = tk.Entry(window_frame, width=80)
         cell_entry.grid(row=0, column=1, padx=5, pady=20)
         cell_button = tk.Button(window_frame, text="Browse", command=browse)
         cell_button.grid(row=0, column=2, padx=5, pady=20)
