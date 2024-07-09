@@ -90,7 +90,7 @@ def process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bri
     df_metrics = edges.copy(deep=True)
 
     # Create df_metrics to show to user
-    df_metrics = df_metrics[['ID','LABEL','D','MATERIAL','USER_L','STRTN_ID','STOPN_ID','cc_norm','bc_norm','is_bridge','cm']]
+    df_metrics = df_metrics[['ID','LABEL','D','MATERIAL','USER_L','cc_norm','bc_norm','is_bridge','cm']]
 
     # Round the columns 'cc_norm', 'bc_norm', and 'cm' in df_metrics
     df_metrics['cc_norm'] = df_metrics['cc_norm'].round(3)  # Replace 2 with your desired number of decimal places
@@ -101,14 +101,12 @@ def process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bri
     rename_dict = {
         'D'      : 'DIAMETER (mm)',
         'USER_L' : 'LENGTH (m)',
-        'STRTN_ID': 'STARTING NODE',
-        'STOPN_ID': 'STOPPING NODE',
         'cc_norm': 'CLOSENESS CENTRALITY',
         'bc_norm': 'BETWEENNESS CENTRALITY',
         'is_bridge': 'BRIDGE',
         'cm': 'COMPOSITE METRIC',
-
         }
+    
     df_metrics = df_metrics.rename(columns=rename_dict)
 
     df_metrics.to_csv(output_path + "df_metrics.csv")
@@ -150,6 +148,7 @@ def plot_metrics(gdf, G, nodes, edges, plot_metrics, figsize, plot, output_path)
             cbar.set_label("Normalized Closeness Centrality")
 
             ax.axis("off")
+            plt.tight_layout()
             if plot:
                 plt.show()
             else:
@@ -175,6 +174,7 @@ def plot_metrics(gdf, G, nodes, edges, plot_metrics, figsize, plot, output_path)
             cbar.set_label("Normalized Betweenness Centrality")
 
             ax.axis("off")
+            plt.tight_layout()
             if plot:
                 plt.show()
             else:
@@ -217,6 +217,7 @@ def plot_metrics(gdf, G, nodes, edges, plot_metrics, figsize, plot, output_path)
 
             # Turn off axis
             ax.axis("off")
+            plt.tight_layout()
 
             if plot:
                 plt.show()
@@ -243,7 +244,7 @@ def plot_metrics(gdf, G, nodes, edges, plot_metrics, figsize, plot, output_path)
             cbar.set_label("Composite Metric")
 
             ax.axis("off")
-
+            plt.tight_layout()
             if plot:
                 plt.show()
             else:
@@ -968,11 +969,14 @@ def manipulate_opt_results(edges, X, F, pipe_table_trep, pipes_gdf_cell):
 
     # Get the index of the knee point
     ind_opt = next((i for i, val in enumerate(f1_values) if val == kn.knee), None)
-
-    # Get the optimal X values
-    X_opt = X[ind_opt,:]
-    # Return a shapefile which contains t* and t_opt
     
+    if ind_opt is None:
+         X_opt = X[:,-1]
+    else:
+     # Get the optimal X values
+         X_opt = X[ind_opt,:]
+
+    # Return a shapefile which contains t* and t_opt    
     pipes_gdf_cell['t_star'] = pipe_table_trep['t_rep']
     pipes_gdf_cell['t_opt'] = X_opt
     pipes_gdf_cell_merged = pd.merge(pipes_gdf_cell, edges[[ 'LABEL', 'geometry']], on='LABEL', how='left')
