@@ -91,3 +91,20 @@ def extract_optimized_cells_data(base_folder: str):
 		data[folder] = {'pipes_lines_paths': pipes_lines_paths, 'attributes': attributes}
 	
 	return data
+
+
+def extract_pipe_grouping_data(shp_path: str):
+	gdf = gpd.read_file(shp_path)
+	gdf.set_crs(epsg=2100, inplace=True)
+	gdf = reproject_shp(gdf)
+
+	pipes_lines_paths: List[List[Tuple[float, float]]] = []
+	
+	# Extract the geometry of the shapefile and for each geometry extract the coordinates of the line and append them to the list
+	for geometry in gdf.geometry:
+		pipes_lines_paths.append([])
+		for point in geometry.coords:
+			pipes_lines_paths[-1].append((point[1], point[0]))
+	
+	attributes = gdf.drop(columns='geometry')
+	return pipes_lines_paths, attributes

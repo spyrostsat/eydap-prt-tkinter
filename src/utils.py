@@ -1,4 +1,5 @@
 from typing import List, Dict
+import tkinter as tk
 import glob
 import string
 import os
@@ -125,3 +126,18 @@ def generate_distinct_colors(start: int, end: int) -> Dict[str, str]:
         gradient_dict[str(i)] = distinct_colors[color_index]
     
     return gradient_dict
+
+
+class RedirectOutput:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+
+
+    def write(self, string):
+        self.text_widget.insert(tk.END, string)
+        self.text_widget.see(tk.END)  # Scroll to the end        
+        self.text_widget.update_idletasks()  # Force the GUI to update
+
+
+    def flush(self):
+        pass

@@ -16,6 +16,7 @@ from src.tools import *
 import ctypes
 import platform
 import datetime
+import sys
 import json
 import warnings
 from typing import List
@@ -444,6 +445,12 @@ class PipeReplacementTool:
                     return
                 self.decision_support_tool()
             
+            if selected_item == "Pipe grouping":
+                if not self.step3_finished:
+                    messagebox.showerror("Error", "You need to run a cell optimization first")
+                    return
+                self.pipe_grouping()
+            
         except IndexError:
             pass
     
@@ -471,6 +478,33 @@ class PipeReplacementTool:
         t_opt = pipe.data[1]
         cell = pipe.data[2]
         messagebox.showinfo(title=f"Pipe: {pipe_label}    Cell: {cell}", message=f"Replacement Year: {t_opt}")
+
+
+    def handle_pipe_grouping_click(self, pipe):
+        pipe_label = pipe.data[0]
+        cluster = int(pipe.data[1])
+        cell = pipe.data[2]
+        messagebox.showinfo(title=f"Pipe: {pipe_label}", message=f"Cell: {cell}\n\nCluster: {cluster}")
+
+
+    def show_pipe_grouping_info(self, info_path):
+        with open(info_path, "r") as f:
+            info = f.read()
+        
+        window = tk.Toplevel(self.root)
+        window.title("Pipe Grouping Info")
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+
+        # Center the window
+        window_width = self.screen_width // 1.5
+        window_height = self.screen_height // 2.3
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        tk.Label(window_frame, text=info, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5))).pack(expand=True, fill='both')
 
 
     def landing_page(self):
@@ -540,7 +574,7 @@ class PipeReplacementTool:
         self.top_height = int(self.height * 0.7)
         
         left_frame_width_mult = 0.2
-        self.map_width_multiplier = 0.6
+        self.map_width_multiplier = 0.55
         right_frame_width_mult = 1 - left_frame_width_mult - self.map_width_multiplier
 
         left_frame = tk.Frame(self.root, width=int(self.width * left_frame_width_mult), height=self.top_height)
@@ -599,16 +633,35 @@ class PipeReplacementTool:
             widget.destroy()
         
         # Add the right frame widgets
-        tk.Label(self.right_frame, text="     Scenario Properties     ", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=20)
         
-        if self.closeness_metric: tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.closeness_metric:
+            tk.Label(self.right_frame, text=f"Risk assessment (topological metrics)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        
         if self.betweeness_metric: tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         if self.bridges_metric: tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.cell_lower_bound: tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        
+        if self.cell_lower_bound: 
+            tk.Label(self.right_frame, text="Risk assessment (Combined metrics/damages)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        
         if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         if self.combined_metric_weight: tk.Label(self.right_frame, text=f"Combined metric weight: {self.combined_metric_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.select_square_size: tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        
+        if self.select_square_size: 
+            tk.Label(self.right_frame, text="Risk assessment (Optimal / Selected cell size)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+
+        if self.step3_finished:
+            tk.Label(self.right_frame, text="LCC optimization", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
+            optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
+            
+            self.right_frame.update_idletasks()
+            right_frame_width = self.right_frame.winfo_width()
+            tk.Label(self.right_frame, text=f"Optimized cells: {', '.join(optimized_cells)}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2)), wraplength=int(right_frame_width* 0.9)).pack(pady=5)
 
 
     def update_middle_frame(self, display_type: str, *args):
@@ -666,6 +719,31 @@ class PipeReplacementTool:
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
 
+        if display_type == "pipe_grouping":
+            pipe_grouping_shp = args[0]
+            cell_number = args[1]
+            
+            info_path = pipe_grouping_shp.replace(".shp", ".txt")
+
+            pipes_lines_paths, attributes = extract_pipe_grouping_data(pipe_grouping_shp)
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
+            map_widget.pack(expand=True, fill='both')
+            
+            map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
+            
+            clusters = np.unique(attributes['cluster'])
+            clusters = [int(c) for c in clusters]
+            pipes_colors = generate_distinct_colors(min(clusters), max(clusters))
+
+            for index, line_path in enumerate(pipes_lines_paths):
+                pipe_color = pipes_colors[str(int(attributes['cluster'][index]))]
+                map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(attributes['ID'][index], attributes['cluster'][index], cell_number), command=self.handle_pipe_grouping_click)
+
+            tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            for material, color in pipes_colors.items():
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
+                tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+            tk.Button(self.middle_frame, text="Show info", command=lambda: self.show_pipe_grouping_info(info_path), bg=self.blue_bg, fg="#ffffff", font=(self.font, int(self.font_size // 2)), activebackground=self.blue_bg, activeforeground="#ffffff").pack(side='right', padx=60)
 
         if display_type == 'betweeness':
             img = Image.open(args[0])
@@ -1036,11 +1114,11 @@ class PipeReplacementTool:
             
             algorithm = NSGA2(pop_size=pop_size, n_offsprings=n_offsprings, sampling=IntegerRandomSampling(), crossover=SBX(prob=0.9, eta=15, repair=RoundingRepair()), mutation=PM(eta=20, repair=RoundingRepair()), eliminate_duplicates=True)
             
-            info_label.config(text=f"Optimizing cell {cell_index}. This may take a while.", fg=self.fg)
+            info_label.config(text=f"Optimizing cell {cell_index}. This may take a while. Total number of generations: {n_gen}", fg=self.fg)
             run_button.config(state=tk.DISABLED)
             window.update()
             
-            res = minimize(problem, algorithm, seed=1, termination=('n_gen', 1), save_history=True, verbose=True)
+            res = minimize(problem, algorithm, seed=1, termination=('n_gen', n_gen), save_history=True, verbose=True)
             X = res.X
             F = res.F
             
@@ -1105,26 +1183,21 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=2)
+        
+        # Create a Text widget
+        redirected_output = tk.Text(window_frame, wrap='word', height=8, fg=self.fg, font=(self.font, int(self.font_size // 2)))
+        redirected_output.grid(row=index+7, column=0, padx=5, pady=10, columnspan=2)
+        sys.stdout = RedirectOutput(redirected_output)
 
 
     def decision_support_tool(self):
 
 
-        def browse() -> None:
-            filename = filedialog.askopenfilename(filetypes=[("Shapefiles", "*.shp")])
-            if filename:
-                cell_entry.delete(0, tk.END)
-                cell_entry.insert(tk.END, filename)
-        
-
         def cell_click():
             nonlocal cell_shp_path
             
-            cell_shp_path = cell_entry.get()
-
-            if not cell_shp_path or not cell_shp_path.endswith(".shp") or not os.path.exists(cell_shp_path):
-                messagebox.showerror("Error", "Please select a valid shapefile")
-                return
+            optimized_cell = cell_entry.get()
+            cell_shp_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{optimized_cell}", f"Priority_{optimized_cell}_cell_optimal_replacement.shp")
             
             # Empty the window and add two new buttons
             for widget in window_frame.winfo_children():
@@ -1297,13 +1370,73 @@ class PipeReplacementTool:
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
-
-        cell_label = tk.Label(window_frame, text="Network shapefile")
-        cell_label.grid(row=0, column=0, padx=5, pady=20)
-        cell_entry = tk.Entry(window_frame, width=80)
+        
+        base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
+        optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
+        
+        dropdown_label = tk.Label(window_frame, text="Select optimized cell", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        dropdown_label.grid(row=0, column=0, padx=5, pady=20)
+        cell_entry = ttk.Combobox(window_frame, values=optimized_cells, state='readonly')
         cell_entry.grid(row=0, column=1, padx=5, pady=20)
-        cell_button = tk.Button(window_frame, text="Browse", command=browse)
-        cell_button.grid(row=0, column=2, padx=5, pady=20)
+        cell_entry.set(optimized_cells[0])
+
+        # Add the 'Run' button to the window
+        run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=cell_click)
+        run_button.grid(row=1, column=0, padx=5, pady=10, columnspan=3)
+
+
+    def pipe_grouping(self):
+        
+        
+        def cell_click():
+            nonlocal run_button, selected_cell
+            
+            selected_cell = cell_entry.get()
+            folder_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{selected_cell}")
+            all_shp_files = [f for f in os.listdir(folder_path) if f.endswith(".shp") and f"Priority_{selected_cell}_cell_optimal_replacement" not in f]
+            
+            if not all_shp_files:
+                messagebox.showerror("Error", "No shapefiles found in the selected cell")
+                return
+            
+            dropdown_label.config(text="Select shapefile", fg=self.fg)
+            cell_entry.config(values=all_shp_files)
+            cell_entry.set(all_shp_files[0])
+            run_button.destroy()
+            run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_click)
+            run_button.grid(row=1, column=0, padx=5, pady=10, columnspan=3)
+            window.update()
+            
+            
+        def run_click():
+            folder_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{selected_cell}")
+            selected_shp = os.path.join(folder_path, cell_entry.get())
+            self.update_middle_frame('pipe_grouping', selected_shp, selected_cell)
+            window.destroy()
+            
+        
+        selected_cell = None
+        
+        window = tk.Toplevel(self.root)
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        # Center the window
+        window_width = self.screen_width // 3.5
+        window_height = self.screen_height // 4.5
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+        
+        base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
+        optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
+        
+        dropdown_label = tk.Label(window_frame, text="Select optimized cell", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        dropdown_label.grid(row=0, column=0, padx=5, pady=20)
+        cell_entry = ttk.Combobox(window_frame, values=optimized_cells, state='readonly')
+        cell_entry.grid(row=0, column=1, padx=5, pady=20)
+        cell_entry.set(optimized_cells[0])
 
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=cell_click)
