@@ -3,9 +3,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
 from PIL import ImageTk, Image
-from shapely.geometry import Point
 from src.map_utils import *
-from copy import deepcopy
 import tkinter as tk
 import tkintermapview
 import time
@@ -13,12 +11,9 @@ from src.utils import *
 from src.const import MATERIAL_COLORS, LEFT_MENU
 import os
 from src.tools import *
-import ctypes
-import platform
 import datetime
 import sys
 import json
-import warnings
 from typing import List
 import geopandas as gpd
 import numpy as np
@@ -56,6 +51,8 @@ class PipeReplacementTool:
         
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
+        self.root.attributes('-zoomed', True)
+        
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
         
         # Let's find the width and height of the screen
@@ -706,12 +703,14 @@ class PipeReplacementTool:
 
 
     def update_middle_frame(self, display_type: str, *args):
+        map_mult = 0.85
+        
         # Clear the middle frame
         for widget in self.middle_frame.winfo_children():
             widget.destroy()
         
         if display_type == 'network':
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult))
             map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
@@ -726,7 +725,7 @@ class PipeReplacementTool:
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
             
         if display_type == 'damages':
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult))
             map_widget.pack()
             
             map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
@@ -736,7 +735,7 @@ class PipeReplacementTool:
         
         if display_type == "optimized_cells":
             data = extract_optimized_cells_data(os.path.join(self.project_folder, "Cell_optimization_results"))
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult))
             map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
@@ -767,7 +766,7 @@ class PipeReplacementTool:
             info_path = pipe_grouping_shp.replace(".shp", ".txt")
 
             pipes_lines_paths, attributes = extract_pipe_grouping_data(pipe_grouping_shp)
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult))
             map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
