@@ -51,7 +51,6 @@ class PipeReplacementTool:
         
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
-        self.root.attributes('-zoomed', True)
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
         
