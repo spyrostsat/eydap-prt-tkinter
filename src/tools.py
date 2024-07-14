@@ -1103,13 +1103,17 @@ def export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under,
     df_string = results_df.to_string(justify='justify-all')
 
     # Specific sentence to add
-    sentence_1 = f'Έχετε επιλέξει {red_edges_df.shape[0]} αγωγούς από το shapefile του κελιού.'
+    # sentence_1 = f'Έχετε επιλέξει {red_edges_df.shape[0]} αγωγούς από το shapefile του κελιού.'
+    sentence_1 = f"You have selected {red_edges_df.shape[0]} pipes from the shapefile of the cell."
     
-    sentence_2 = f'Οι αγωγοί έχουν χωριστεί σε {results_df.shape[0]} ομάδες (groups) όπου δημιουργούν συνεχή τμήματα. Παρακάτω φαίνονται τα χαρακτηριστικά τους:'
+    # sentence_2 = f'Οι αγωγοί έχουν χωριστεί σε {results_df.shape[0]} ομάδες (groups) όπου δημιουργούν συνεχή τμήματα. Παρακάτω φαίνονται τα χαρακτηριστικά τους:'
+    sentence_2 = f'The pipes have been divided into {results_df.shape[0]} groups where they form continuous segments. Below are their characteristics:'
     
-    sentence_3 = f'Από τα {total_length_all} m των επιλεγμένων αγωγών, συνολικά {total_length_all-total_length_under} m αγωγών βρίσκονται σε συνέχη κομμάτια άνω των {distance} m.'
+    # sentence_3 = f'Από τα {total_length_all} m των επιλεγμένων αγωγών, συνολικά {total_length_all-total_length_under} m αγωγών βρίσκονται σε συνέχη κομμάτια άνω των {distance} m.'
+    sentence_3 = f'Out of the {total_length_all} m of the selected pipes, a total of {total_length_all-total_length_under} m of pipes are in continuous segments over {distance} m.'
     
-    sentence_4 = f'Αυτό αντιστοιχεί στο {perc*100} % των επιλεγμένων αγωγών.'
+    # sentence_4 = f'Αυτό αντιστοιχεί στο {perc*100} % των επιλεγμένων αγωγών.'
+    sentence_4 = f'This corresponds to {perc*100} % of the selected pipes.'
     
     # Concatenate DataFrame string with the specific sentence
     output_string = sentence_1 +'\n\n'+ sentence_2 +'\n\n'+ df_string + '\n\n' + sentence_3 + '\n\n' + sentence_4

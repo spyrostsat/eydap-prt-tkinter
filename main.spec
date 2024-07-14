@@ -15,7 +15,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\christodoulos\\Workspace\\eydap-pipe-replacement-tool\\venv\\Lib\\site-packages\\rasterio\\proj_data', 'rasterio\\proj_data')],
+    datas=[('C:\\Users\\stsat\\Projects\\eydap-prt-tkinter\\venv\\Lib\\site-packages\\rasterio\\proj_data', 'rasterio\\proj_data')],
     hiddenimports=additional_packages,
     hookspath=[],
     hooksconfig={},

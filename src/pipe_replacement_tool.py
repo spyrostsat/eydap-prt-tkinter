@@ -26,7 +26,9 @@ import pandas as pd
 
 
 class PipeReplacementTool:
-    def initial_configurations(self) -> None:
+    
+
+    def __init__(self):
         self.font = "Sans"
         self.font_size = 18
         
@@ -50,6 +52,8 @@ class PipeReplacementTool:
         
         # Let's create the root window
         self.root = tk.Tk()
+        self.root.withdraw()  # Don't show the root window yet
+        
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
@@ -70,15 +74,11 @@ class PipeReplacementTool:
         height_offset = int((self.screen_height - self.height) / 2)  # this will be the offset of the root window in the y axis
         
         self.root.geometry(f"{self.width}x{self.height}+{width_offset}+{height_offset}")
-        self.root.iconphoto(True, tk.PhotoImage(file="./src/img/icon.png", height=170))
+        self.root.iconphoto(True, tk.PhotoImage(file="icon.png", height=170))
 
         # Images section
-        self.logo_image = tk.PhotoImage(file='./src/img/logo.png')
+        self.logo_image = tk.PhotoImage(file='logo.png')        
 
-
-    def __init__(self) -> None:
-        
-        self.initial_configurations()
         
         # Initialize all class variables related to the metadata.json file to None
         self.project_opened = False
@@ -133,7 +133,8 @@ class PipeReplacementTool:
         self.fileMenu.add_command(label="New", command=self.new_scenario)
         self.fileMenu.add_command(label="Open", command=self.open_scenario)
 
-        self.landing_page()
+        self.splash_screen()
+        
         self.root.mainloop()
 
 
@@ -493,6 +494,7 @@ class PipeReplacementTool:
         
         window = tk.Toplevel(self.root)
         window.title("Pipe Grouping Info")
+        window.resizable(False, False)
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
@@ -507,7 +509,44 @@ class PipeReplacementTool:
         tk.Label(window_frame, text=info, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5))).pack(expand=True, fill='both')
 
 
+    def splash_screen(self):
+        self.splash = tk.Toplevel()
+        self.splash.title("Pipe Replacement Tool")
+        self.screen_width = self.splash.winfo_screenwidth()
+        self.screen_height = self.splash.winfo_screenheight()
+
+        # Set the size and position of the splash screen
+        # Center the window
+        window_width = self.screen_width // 5
+        window_height = self.screen_height // 3.5
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        self.splash.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+        
+        self.splash.configure(bg="#1d2b59")
+        self.splash.config(cursor="watch")
+        self.splash.overrideredirect(True)  # Remove the close, maximize, and minimize buttons
+        self.logo_image = tk.PhotoImage(file='logo.png')
+        
+        self.logo_label = tk.Label(self.splash, bg="#1d2b59", image=self.logo_image)
+        self.logo_label.pack(expand=True)
+        
+        # Add a label to the splash screen
+        label = tk.Label(self.splash, text="Loading...", font=("Sans", 18), fg="white", bg="#1d2b59")
+        label.pack(expand=True)
+
+        # Run the splash screen
+        self.landing_page()
+        
+    
+    def destroy_splash_screen(self):
+        self.splash.destroy()
+        self.root.deiconify()
+
+
     def landing_page(self):
+        self.splash.after(3000, self.destroy_splash_screen)
+        
         self.landing_page_frame = tk.Frame(self.root, bg=self.bg)
         self.landing_page_frame.pack(expand=True, fill='both')
         
@@ -582,6 +621,8 @@ class PipeReplacementTool:
 
         self.middle_frame = tk.Frame(self.root, width=int(self.width * self.map_width_multiplier), height=self.top_height, bg=self.bg, border=1, borderwidth=1, relief="solid")
         self.middle_frame.grid(row=1, column=1, sticky="nsew")
+        
+        self.my_images_size = (int(self.width * self.map_width_multiplier / 2), int(self.width * self.map_width_multiplier / 2))
         
         self.update_middle_frame('network')
 
@@ -670,8 +711,8 @@ class PipeReplacementTool:
             widget.destroy()
         
         if display_type == 'network':
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both')
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
                     
@@ -685,8 +726,8 @@ class PipeReplacementTool:
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
             
         if display_type == 'damages':
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both')
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget.pack()
             
             map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
                         
@@ -695,8 +736,8 @@ class PipeReplacementTool:
         
         if display_type == "optimized_cells":
             data = extract_optimized_cells_data(os.path.join(self.project_folder, "Cell_optimization_results"))
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both')
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
             
@@ -726,8 +767,8 @@ class PipeReplacementTool:
             info_path = pipe_grouping_shp.replace(".shp", ".txt")
 
             pipes_lines_paths, attributes = extract_pipe_grouping_data(pipe_grouping_shp)
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
-            map_widget.pack(expand=True, fill='both')
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * 0.9))
+            map_widget.pack()
             
             map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2]))
             
@@ -747,7 +788,7 @@ class PipeReplacementTool:
 
         if display_type == 'betweeness':
             img = Image.open(args[0])
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             
             img_label = tk.Label(self.middle_frame, image=photo_image)
@@ -756,7 +797,7 @@ class PipeReplacementTool:
         
         if display_type == 'closeness':
             img = Image.open(args[0])
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             
             img_label = tk.Label(self.middle_frame, image=photo_image)
@@ -765,7 +806,7 @@ class PipeReplacementTool:
         
         if display_type == 'bridges':
             img = Image.open(args[0])
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             
             img_label = tk.Label(self.middle_frame, image=photo_image)
@@ -774,7 +815,7 @@ class PipeReplacementTool:
         
         if display_type == 'composite':
             img = Image.open(args[0])
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             
             img_label = tk.Label(self.middle_frame, image=photo_image)
@@ -795,7 +836,7 @@ class PipeReplacementTool:
 
         if display_type == 'criticality_map_selected_cell_size':
             img = Image.open(args[0])
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             
             img_label = tk.Label(self.middle_frame, image=photo_image)
@@ -838,7 +879,7 @@ class PipeReplacementTool:
                 continue
             
             img = Image.open(os.path.join(self.step2_output_path, file))
-            img_resized = img.resize((800, 800))
+            img_resized = img.resize(self.my_images_size)
             photo_image = ImageTk.PhotoImage(img_resized)
             all_images.append(photo_image)
         
@@ -1194,10 +1235,10 @@ class PipeReplacementTool:
 
 
         def cell_click():
-            nonlocal cell_shp_path
+            nonlocal cell_shp_path, selected_optimized_cell
             
-            optimized_cell = cell_entry.get()
-            cell_shp_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{optimized_cell}", f"Priority_{optimized_cell}_cell_optimal_replacement.shp")
+            selected_optimized_cell = cell_entry.get()
+            cell_shp_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{selected_optimized_cell}", f"Priority_{selected_optimized_cell}_cell_optimal_replacement.shp")
             
             # Empty the window and add two new buttons
             for widget in window_frame.winfo_children():
@@ -1260,6 +1301,7 @@ class PipeReplacementTool:
             # Add the 'Run' button to the window
             run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_click)
             run_button.grid(row=index+1, column=0, padx=5, pady=10, columnspan=ids_per_row)
+
 
         def run_click():
             nonlocal min_distance_entry, output_shp_name_entry, start_time, end_time, selected_pipe_ids
@@ -1324,7 +1366,8 @@ class PipeReplacementTool:
             else:
                 shp_name = output_shp_name_entry.get()
 
-            row_number_to_keep = cell_shp_path.split("/")[-2].split("_")[-1]
+            row_number_to_keep = selected_optimized_cell
+            
             if proceedTime:
                 filter_list = [start_time, end_time]
             else:
@@ -1348,6 +1391,7 @@ class PipeReplacementTool:
             window.update()
         
         
+        selected_optimized_cell = None
         cell_shp_path = None
         proceedTime = None
         start_time_entry = None
