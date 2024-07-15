@@ -51,7 +51,7 @@ class PipeReplacementTool:
         
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
-        
+		
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
         
         # Let's find the width and height of the screen
@@ -126,7 +126,7 @@ class PipeReplacementTool:
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
         self.helpMenu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Pipe Replacement Tool\nVersion 1.0\nDeveloped by: UWMH"))
         
-        self.fileMenu.add_command(label="New", command=self.new_scenario)
+        # self.fileMenu.add_command(label="New", command=self.new_scenario)
         self.fileMenu.add_command(label="Open", command=self.open_scenario)
 
         self.splash_screen()
@@ -224,7 +224,7 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 3
+        window_width = self.screen_width // 2.5
         window_height = self.screen_height // 2
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
@@ -608,8 +608,8 @@ class PipeReplacementTool:
         # Create and place the frames
         self.top_height = int(self.height * 0.7)
         
-        left_frame_width_mult = 0.2
-        self.map_width_multiplier = 0.55
+        left_frame_width_mult = 0.15
+        self.map_width_multiplier = 0.5
         right_frame_width_mult = 1 - left_frame_width_mult - self.map_width_multiplier
 
         left_frame = tk.Frame(self.root, width=int(self.width * left_frame_width_mult), height=self.top_height)
@@ -673,14 +673,14 @@ class PipeReplacementTool:
         tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=20)
         
         if self.closeness_metric:
-            tk.Label(self.right_frame, text=f"Risk assessment (topological metrics)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
             tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         if self.betweeness_metric: tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         if self.bridges_metric: tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         if self.cell_lower_bound: 
-            tk.Label(self.right_frame, text="Risk assessment (Combined metrics/damages)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text="Combined metrics/damages", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
             tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
@@ -688,7 +688,7 @@ class PipeReplacementTool:
         if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         if self.select_square_size: 
-            tk.Label(self.right_frame, text="Risk assessment (Optimal / Selected cell size)", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text="Optimal / Selected cell size", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
             tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
 
         if self.step3_finished:
@@ -724,7 +724,7 @@ class PipeReplacementTool:
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
             
         if display_type == 'damages':
-            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult))
+            map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
             map_widget.pack()
             
             map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2]))
