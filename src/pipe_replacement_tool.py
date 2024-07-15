@@ -10,6 +10,7 @@ import time
 from src.utils import *
 from src.const import MATERIAL_COLORS, LEFT_MENU
 import os
+import platform
 from src.tools import *
 import datetime
 import sys
@@ -51,7 +52,12 @@ class PipeReplacementTool:
         
         self.root.title("Pipe Replacement Tool")
         self.root.resizable(True, True)
-		
+        
+        if "Windows" in platform.system():
+            self.root.state('zoomed')
+        else:
+            self.root.attributes('-zoomed', True)
+        
         self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)
         
         # Let's find the width and height of the screen
@@ -170,14 +176,18 @@ class PipeReplacementTool:
         
         
         def create_scenario():
-            folder = filedialog.askdirectory()
-            if not folder:
-                return
-            
             name = name_entry.get().strip()
             description = description_text.get("1.0", tk.END).strip()
             network = network_entry.get().strip()
             damage = damage_entry.get().strip()
+            
+            if not name or not description or not network or not damage:
+                messagebox.showerror("Error", "Please fill in all the fields")
+                return
+            
+            folder = filedialog.askdirectory()
+            if not folder:
+                return
             
             if name and description and network and damage and network.endswith(".shp") and damage.endswith(".shp"):
                 # Create a folder with the scenario name inside the selected folder
@@ -955,8 +965,8 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 3
-        window_height = self.screen_height // 2.5
+        window_width = self.screen_width // 2.5
+        window_height = self.screen_height // 2
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
@@ -1407,8 +1417,8 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 2
-        window_height = self.screen_height // 3
+        window_width = self.screen_width // 1.7
+        window_height = self.screen_height // 2.5
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
