@@ -115,12 +115,14 @@ class PipeReplacementTool:
         self.path_fishnet = None
         self.step2b_finished = False
         
-        # Initialize all other class variables to None
+        self.contract_lifespan = None
+        self.time_relaxation = None
+        self.step3_finished = False
+        
+        # Initialize all other class variables
         self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
         self.recent_scenarios = None
         self.network_shapefile_attributes = None
-        
-        self.step3_finished = False
         
         self.menuBar = tk.Menu(self.root)
         self.root.config(menu=self.menuBar)
@@ -193,6 +195,14 @@ class PipeReplacementTool:
                 # Create a folder with the scenario name inside the selected folder
                 scenario_folder = os.path.join(folder, name, "")
                 os.makedirs(scenario_folder, exist_ok=True)
+                
+                # Delete every file and inner folder inside the scenario folder
+                for file in os.listdir(scenario_folder):
+                    file_path = os.path.join(scenario_folder, file)
+                    if os.path.isfile(file_path):
+                        os.unlink(file_path)
+                    else:
+                        shutil.rmtree(file_path)
                 
                 network_shp = os.path.join(scenario_folder, os.path.basename(network))
                 damage_shp = os.path.join(scenario_folder, os.path.basename(damage))
@@ -318,6 +328,8 @@ class PipeReplacementTool:
         self.path_fishnet = metadata.get("path_fishnet")
         self.step2b_finished = metadata.get("step2b_finished")
         
+        self.contract_lifespan = metadata.get("contract_lifespan")
+        self.time_relaxation = metadata.get("time_relaxation")
         self.step3_finished = metadata.get("step3_finished")
         
         if self.fishnet_index is not None:
@@ -364,6 +376,8 @@ class PipeReplacementTool:
             "fishnet_index": "fishnet_index.csv" if self.step2b_finished else None,
             "path_fishnet": self.path_fishnet,
             "step2b_finished": self.step2b_finished,
+            "contract_lifespan": self.contract_lifespan,
+            "time_relaxation": self.time_relaxation,
             "step3_finished": self.step3_finished
         }
         with open(os.path.join(self.project_folder, "metadata.json"), "w") as f:
@@ -598,15 +612,14 @@ class PipeReplacementTool:
     
     
     def main_page(self):
+        if not self.project_opened:
+            self.fileMenu.add_command(label="Save", command=self.save_scenario)
+            self.fileMenu.add_separator()
+            self.fileMenu.add_command(label="Exit", command=self.close_app)     
+        
         self.project_opened = True
         self.network_bounding_box, self.network_shp_centroid, self.network_pipes_lines_paths, self.network_shapefile_attributes = extract_network_shapefile_data(self.network_shapefile)
         self.damages_bounding_box, self._damages_bbox_centroid, self.damages_points, self.damages_shapefile_attributes = extract_damages_shapefile_data(self.damage_shapefile)
-        
-        # Add the 'Save' button to the menu bar above the Exit button
-        self.fileMenu.add_command(label="Save", command=self.save_scenario)
-        # self.fileMenu.add_command(label="Save as...")
-        self.fileMenu.add_separator()
-        self.fileMenu.add_command(label="Exit", command=self.close_app)
         
         top_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15))
         top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
@@ -1040,18 +1053,25 @@ class PipeReplacementTool:
         combined_metric_failures_label_1.grid(row=0, column=0, padx=5, pady=20)
         combined_metric_failures_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=0.01)
         combined_metric_failures_slider.grid(row=0, column=1, padx=5, pady=20)
+        combined_metric_failures_slider.set(0.5)
         combined_metric_failures_label_2 = tk.Label(window_frame, text="Failures weight", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         combined_metric_failures_label_2.grid(row=0, column=2, padx=5, pady=20)
         
+        cell_min_size = 100
+        cell_max_size = 1000
+        resolution = 100
+        
         cell_lower_bound_label = tk.Label(window_frame, text="Cell lower bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         cell_lower_bound_label.grid(row=1, column=0, padx=5, pady=20)
-        cell_lower_bound_slider = tk.Scale(window_frame, from_=100, to=1000, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
+        cell_lower_bound_slider = tk.Scale(window_frame, from_=cell_min_size, to=cell_max_size, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=resolution)
         cell_lower_bound_slider.grid(row=1, column=1, padx=5, pady=20)
+        cell_lower_bound_slider.set(cell_min_size)
         
         cell_upper_bound_label = tk.Label(window_frame, text="Cell upper bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         cell_upper_bound_label.grid(row=2, column=0, padx=5, pady=20)
-        cell_upper_bound_slider = tk.Scale(window_frame, from_=200, to=1000, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
+        cell_upper_bound_slider = tk.Scale(window_frame, from_=cell_min_size + resolution, to=cell_max_size, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=resolution)
         cell_upper_bound_slider.grid(row=2, column=1, padx=5, pady=20)
+        cell_upper_bound_slider.set(cell_max_size)
         
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_combined_analysis)
@@ -1131,7 +1151,12 @@ class PipeReplacementTool:
             
             pipe_materials_lifespan = {}
             for material_name in self.unique_pipe_materials_names:
-                pipe_materials_lifespan[material_name] = pipe_materials[material_name].get()
+                try:
+                    pipe_materials_lifespan[material_name] = int(pipe_materials[material_name].get())
+                except:
+                    info_label.config(text="Please insert a valid value for each pipe material", fg=self.danger_bg)
+                    run_button.config(state=tk.NORMAL)
+                    return
             
             contract_lifespan = contract_lifespan_slider.get()
             time_relaxation = time_relaxation_slider.get()
@@ -1143,12 +1168,38 @@ class PipeReplacementTool:
                 run_button.config(state=tk.NORMAL)
                 return
             
-            os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}"), exist_ok=True)
-
+            # If this is the first time running the optimization, we save the values and proceed
+            if not self.step3_finished:
+                self.contract_lifespan = contract_lifespan
+                self.time_relaxation = time_relaxation
+                self.pipe_materials = pipe_materials_lifespan
+            
+            else:
+                # Make sure the values are the same
+                if self.contract_lifespan != contract_lifespan or self.time_relaxation != time_relaxation:
+                    info_label.config(text="Please use the same contract lifespan and time relaxation as before", fg=self.danger_bg)
+                    run_button.config(state=tk.NORMAL)
+                    return
+                
+                for material_name in self.unique_pipe_materials_names:
+                    if self.pipe_materials[material_name] != pipe_materials_lifespan[material_name]:
+                        info_label.config(text="Please use the same material lifespans as before", fg=self.danger_bg)
+                        run_button.config(state=tk.NORMAL)
+                        return
+                
+                # Make sure the user doesn't optimize the same cell twice
+                base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
+                optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
+                
+                if str(cell_index) in optimized_cells:
+                    info_label.config(text="This cell has already been optimized", fg=self.danger_bg)
+                    run_button.config(state=tk.NORMAL)
+                    return
+            
             # Run functions
             pipes_gdf_cell = process_pipes_cell_data(self.topological_analysis_result_shapefile, self.path_fishnet, self.fishnet_index, cell_index, self.results_pipe_clusters, self.pipe_materials)
             
-            pipe_table_trep, LLCCn, ann_budg, xl, xu = calculate_investment_timeseries(pipes_gdf_cell, contract_lifespan, 50, time_relaxation)
+            pipe_table_trep, LLCCn, ann_budg, xl, xu = calculate_investment_timeseries(pipes_gdf_cell, self.contract_lifespan, 50, self.time_relaxation)
 
             # Run optimization
             # number of pipes in this cell
@@ -1157,6 +1208,8 @@ class PipeReplacementTool:
             # define 3 hyperparameters for optimization
             pop_size = int(round((7.17 * number_of_pipes - 1.67), -1))  # linear equation going through (10,70) and (70,500)
             n_gen = int(round((1.33 * number_of_pipes + 6.67), -1))  # linear equation going through (70,100) and (10,20)
+            # n_gen = 2  # TODO: Remove this when deploying
+
             n_offsprings = int(max(round((pop_size / 5), -1), 5))
             
             problem = MyProblem(pipe_table_trep, xl, xu, contract_lifespan, LLCCn)
@@ -1170,14 +1223,14 @@ class PipeReplacementTool:
             res = minimize(problem, algorithm, seed=1, termination=('n_gen', n_gen), save_history=True, verbose=True)
             X = res.X
             F = res.F
-            
-            pipes_gdf_cell_merged = manipulate_opt_results(self.edges, X, F, pipe_table_trep, pipes_gdf_cell)  # Run function for making final geodataframe
 
+            pipes_gdf_cell_merged = manipulate_opt_results(self.edges, X, F, pipe_table_trep, pipes_gdf_cell)  # Run function for making final geodataframe
+            
+            os.makedirs(os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}"), exist_ok=True)
             pre_path = os.path.join(self.project_folder, "Cell_optimization_results", f"Cell_Priority_{cell_index}")
             pipes_gdf_cell_merged.to_file(pre_path + f"/Priority_{cell_index}_cell_optimal_replacement.shp")  # Save the shape file into Cell_optimization_results/Cell_Priority_#
             
-            info_label.config(text=f"Calculation for Cell {cell_index} is finished.\nContinue with another cell or close the window and proceed.", fg=self.success_bg)
-            run_button.config(state=tk.NORMAL)
+            info_label.config(text=f"Calculation for Cell {cell_index} has finished!", fg=self.success_bg)
             self.step3_finished = True
             window.update()
             self.update_right_frame()
@@ -1189,13 +1242,13 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 2.2
-        window_height = self.screen_height // 1.4
+        window_width = self.screen_width // 2
+        window_height = self.screen_height
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
 
-        pipe_materials_label = tk.Label(window_frame, text=f"Insert pipe materials and their lifespan", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        pipe_materials_label = tk.Label(window_frame, text=f"Insert lifespan of pipe materials", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=2)
                 
         pipe_materials = {}
@@ -1211,13 +1264,21 @@ class PipeReplacementTool:
         contract_lifespan_label.grid(row=index+2, column=0, padx=5, pady=20)
         contract_lifespan_slider = tk.Scale(window_frame, from_=5, to=15, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
         contract_lifespan_slider.grid(row=index+2, column=1, padx=5, pady=20)
-        contract_lifespan_slider.set(10)
+        
+        if self.contract_lifespan:
+            contract_lifespan_slider.set(self.contract_lifespan)
+        else:
+            contract_lifespan_slider.set(10)
         
         time_relaxation_label = tk.Label(window_frame, text="Allowable time span relaxation", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         time_relaxation_label.grid(row=index+3, column=0, padx=5, pady=20)
         time_relaxation_slider = tk.Scale(window_frame, from_=2, to=5, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
         time_relaxation_slider.grid(row=index+3, column=1, padx=5, pady=20)
-        time_relaxation_slider.set(3)        
+        
+        if self.time_relaxation:
+            time_relaxation_slider.set(self.time_relaxation)
+        else:
+            time_relaxation_slider.set(3)
 
         # Add a label and an input for the user to select the cell index to optimize
         cell_index_label = tk.Label(window_frame, text="Select the cell index to optimize", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))

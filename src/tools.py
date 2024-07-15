@@ -26,7 +26,10 @@ import os
 import momepy
 import contextily as ctx
 import matplotlib.colors as mcolors
+import warnings
 
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 #### STEP1
 def process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path):
@@ -913,19 +916,19 @@ def check_items_in_key(dictionary, fishnet_index, row_number_to_keep) -> Tuple[s
         cell_index = fishnet_index.iloc[row_number_to_keep - 1]
     except IndexError:
         # If row_number_to_keep is out of bounds
-        return f"Η γραμμή {row_number_to_keep} δεν υπάρχει στο shapefile.", False #ξαναβαλε
+        return f"Row number {row_number_to_keep} does not exist in the shapefile.", False
     except Exception as e:
         # Handle other potential errors
-        return f"Προέκυψε σφάλμα: {e}", False
+        return f'Error occurred: {e}', False
 
     # Check if the cell_index exists in the dictionary
     if cell_index not in dictionary:
-        return f"Το κελί '{cell_index}' δεν υπάρχει.", False #δεν υπαρχει 
+        return f'Cell {cell_index} does not exist.', False
     elif not dictionary[cell_index]:
-        return f"Το κελί '{cell_index}' δεν περιέχει αγωγούς καθώς αυτοί έχουν ανατεθεί σε γειτονικά.", False ###ξαναβαλε
+        return f'Cell {cell_index} does not contain any pipes since they have been assigned to neighboring cells.', False
     else:
         number = len(dictionary[cell_index])
-        return f"Το κελί '{cell_index}' περιέχει '{number}' αγωγούς.", True #προχωραμε 
+        return f'Cell {cell_index} contains {number} pipes.', True
 
 
 # Define the optimization problem
