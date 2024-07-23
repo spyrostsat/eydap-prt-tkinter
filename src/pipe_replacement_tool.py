@@ -22,8 +22,6 @@ import pandas as pd
 
 
 class PipeReplacementTool:
-    
-
     def __init__(self):
         self.font = "Sans"
         self.font_size = 18
@@ -132,7 +130,7 @@ class PipeReplacementTool:
         # Add a Help menu which opens a messagebox with information about the application
         self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
-        self.helpMenu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Pipe Replacement Tool\nVersion 1.0\nDeveloped by: UWMH"))
+        self.helpMenu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Pipe Replacement Tool\nVersion 2.0\nDeveloped by: UWMH"))
         
         # self.fileMenu.add_command(label="New", command=self.new_scenario)
         self.fileMenu.add_command(label="Open", command=self.open_scenario)
@@ -305,7 +303,7 @@ class PipeReplacementTool:
         self.betweeness_metric = metadata.get("betweeness_metric")
         self.closeness_metric = metadata.get("closeness_metric")
         self.bridges_metric = metadata.get("bridges_metric")
-        self.unique_pipe_materials_names = np.array(metadata.get("unique_pipe_materials_names"))
+        self.unique_pipe_materials_names = np.array(metadata.get("unique_pipe_materials_names")) if self.topological_analysis_finished else None
         self.topological_analysis_result_shapefile = metadata.get("topological_analysis_result_shapefile")
         self.pipe_materials = metadata.get("pipe_materials")
         
@@ -360,7 +358,7 @@ class PipeReplacementTool:
             "bridges_metric": self.bridges_metric,
             "edges": "edges.gpkg" if self.topological_analysis_finished else None,
             "df_metrics": "df_metrics.csv" if self.topological_analysis_finished else None,
-            "unique_pipe_materials_names": list(self.unique_pipe_materials_names),
+            "unique_pipe_materials_names": list(self.unique_pipe_materials_names) if self.topological_analysis_finished else None,
             "topological_analysis_result_shapefile": self.topological_analysis_result_shapefile,
             "pipe_materials": self.pipe_materials,
             "step2_output_path": self.step2_output_path,
@@ -412,13 +410,13 @@ class PipeReplacementTool:
                 else:
                     messagebox.showerror("Error", "You have already run the topological analysis")
             
-            if selected_item == "Betweeness metric" and self.betweeness_metric:
+            if selected_item == "Betweeness metric" and self.topological_analysis_finished:
                 self.update_middle_frame('betweeness', os.path.join(self.project_folder, "bc_map.png"))
-            if selected_item == "Closeness metric" and self.closeness_metric:
+            if selected_item == "Closeness metric" and self.topological_analysis_finished:
                 self.update_middle_frame('closeness', os.path.join(self.project_folder, "cc_map.png"))
-            if selected_item == "Bridges metric" and self.bridges_metric:
+            if selected_item == "Bridges metric" and self.topological_analysis_finished:
                 self.update_middle_frame('bridges', os.path.join(self.project_folder, "bridge_map.png"))
-            if selected_item == "Composite metric" and self.betweeness_metric:
+            if selected_item == "Composite metric" and self.topological_analysis_finished:
                 self.update_middle_frame('composite', os.path.join(self.project_folder, "cm_map.png"))
             
             if selected_item == "Risk assessment (Combined metrics/damages)":
@@ -448,7 +446,7 @@ class PipeReplacementTool:
                 self.selected_cell_size()
             
             if selected_item == 'Criticality map for selected cell size' and self.step2b_finished:
-                img_path = [f for f in os.listdir(self.step2_output_path) if f.endswith("map.png") and 'lisa' in f][0]
+                img_path = [f for f in os.listdir(self.step2_output_path) if (f.endswith("map.png")) and ('lisa' in f) and (f"{self.select_square_size}_" in f)][0]
                 self.update_middle_frame('criticality_map_selected_cell_size', os.path.join(self.step2_output_path, img_path))
             
             if selected_item == "LCC optimization":
@@ -671,7 +669,7 @@ class PipeReplacementTool:
         # Add vertical padding to Treeview items
         style = ttk.Style()
         style.configure("Treeview", rowheight=35)  # Adjust rowheight as needed
-        style.configure("Treeview", font=(self.font, int(self.font_size // 2.5)))
+        style.configure("Treeview", font=(self.font, int(self.font_size // 2)))
 
         # Add items to Treeview
         # Disable the ability to collapse or hide the children
@@ -684,7 +682,7 @@ class PipeReplacementTool:
                 self.menu_tree.insert(parent_nodes[item["step"]], "end", text=item["name"])
         
         # Add the bottom frame widget
-        tk.Label(bottom_frame, text=f"Pipe Replacement Tool (v.1.0)      © {datetime.datetime.now().year} Urban Water Management & Hydroinformatics Group", fg="#444444", bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
+        tk.Label(bottom_frame, text=f"Pipe Replacement Tool (v.2.0)      © {datetime.datetime.now().year} Urban Water Management & Hydroinformatics Group", fg="#444444", bg=self.bg, font=(self.font, int(self.font_size // 1.5))).pack(pady=10)
 
     
     def update_right_frame(self):
@@ -695,12 +693,11 @@ class PipeReplacementTool:
         # Add the right frame widgets
         tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=20)
         
-        if self.closeness_metric:
+        if self.closeness_metric or self.betweeness_metric or self.bridges_metric:
             tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
             tk.Label(self.right_frame, text=f"Closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        
-        if self.betweeness_metric: tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.bridges_metric: tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
         
         if self.cell_lower_bound: 
             tk.Label(self.right_frame, text="Combined metrics/damages", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
@@ -922,6 +919,10 @@ class PipeReplacementTool:
         
         
         def run_topological_analysis():
+            if self.step2_finished:
+                messagebox.showerror("Error", "You have already run the topological analysis")
+                return
+            
             info_label.config(text="Running topological analysis...", fg=self.fg)
             run_button.config(state=tk.DISABLED)
             
@@ -1012,6 +1013,10 @@ class PipeReplacementTool:
         
         
         def run_combined_analysis():
+            if self.step2b_finished:
+                messagebox.showerror("Error", "You have already run the combined analysis")
+                return
+            
             info_label.config(text="Running combined analysis...", fg=self.fg)
             run_button.config(state=tk.DISABLED)            
             window.update()
@@ -1086,6 +1091,10 @@ class PipeReplacementTool:
         
         
         def run_analysis():
+            if self.step3_finished:
+                messagebox.showerror("Error", "You have already run the selected cell size analysis")
+                return
+            
             info_label.config(text="Running analysis...", fg=self.fg)
             run_button.config(state=tk.DISABLED)
             window.update()
