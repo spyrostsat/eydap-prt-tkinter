@@ -538,7 +538,7 @@ class PipeReplacementTool:
         pipe_id = self.network_shapefile_attributes['ID'][pipe_index]
         pipe_label = self.network_shapefile_attributes['LABEL'][pipe_index]
         pipe_material = self.network_shapefile_attributes['MATERIAL'][pipe_index]
-        messagebox.showinfo(f"Pipe with ID={pipe_id} clicked", f"Pipe Label: {pipe_label}\nPipe Material: {pipe_material}")
+        messagebox.showinfo(f"Pipe clicked", f"Pipe ID: {pipe_id}\n\nPipe Label: {pipe_label}\n\nPipe Material: {pipe_material}")
 
 
     def handle_marker_click(self, marker):
@@ -547,7 +547,7 @@ class PipeReplacementTool:
                 damage_id = int(self.damages_shapefile_attributes['KOD_VLAVIS'][i])
                 damage_date = self.damages_shapefile_attributes['DATE_EIDOP'][i]
                 damage_desc = self.damages_shapefile_attributes['PERIGRAF__'][i]
-                messagebox.showinfo(f"Damage with ID={damage_id}", f"Reported at: {damage_date}\n\nDescription: {damage_desc}")
+                messagebox.showinfo(f"Damage point clicked", f"Damaged ID: {damage_id}\n\nReported at: {damage_date}\n\nDescription: {damage_desc}")
                 break
 
 
@@ -555,14 +555,14 @@ class PipeReplacementTool:
         pipe_label = pipe.data[0]
         t_opt = pipe.data[1]
         cell = pipe.data[2]
-        messagebox.showinfo(title=f"Pipe: {pipe_label}    Cell: {cell}", message=f"Replacement Year: {t_opt}")
+        messagebox.showinfo(title=f"Pipe clicked", message=f"Cell: {cell}\n\nPipe ID: {pipe_label}\n\nReplacement Year: {t_opt}")
 
 
     def handle_pipe_grouping_click(self, pipe):
         pipe_label = pipe.data[0]
         cluster = int(pipe.data[1])
         cell = pipe.data[2]
-        messagebox.showinfo(title=f"Pipe: {pipe_label}", message=f"Cell: {cell}\n\nCluster: {cluster}")
+        messagebox.showinfo(title=f"Pipe clicked", message=f"Cell: {cell}\n\nPipe ID: {pipe_label}\n\nCluster: {cluster}")
 
 
     def show_pipe_grouping_info(self, info_path):
@@ -624,6 +624,9 @@ class PipeReplacementTool:
         
         tk.Label(window_frame, text="Timestamp:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=5, column=0, padx=15, pady=5)
         tk.Label(window_frame, text=time.ctime(scenario_timestamp), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=5, column=1, padx=15, pady=5)
+
+        tk.Label(window_frame, text="Coordinate System:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=6, column=0, padx=15, pady=5)
+        tk.Label(window_frame, text=TARGET_CRS, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=6, column=1, padx=15, pady=5)
 
 
     def show_about_info(self):
@@ -922,9 +925,10 @@ class PipeReplacementTool:
                 map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
         
             tk.Label(self.middle_frame, text="Pipe Material", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            
             for material, color in MATERIAL_COLORS.items():
-                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
         
         if display_type == 'damages':
             map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=self.top_height)
@@ -959,8 +963,8 @@ class PipeReplacementTool:
 
             tk.Label(self.middle_frame, text="Replacement Year", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
             for material, color in pipes_colors.items():
-                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
 
         if display_type == "pipe_grouping":
             pipe_grouping_shp = args[0]
@@ -983,9 +987,11 @@ class PipeReplacementTool:
                 map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(attributes['ID'][index], attributes['cluster'][index], cell_number), command=self.handle_pipe_grouping_click)
 
             tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            
             for material, color in pipes_colors.items():
-                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
+                tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
+            
             tk.Button(self.middle_frame, text="Continuous Pipe Segments Results", command=lambda: self.show_pipe_grouping_info(info_path), bg=self.blue_bg, fg="#ffffff", font=(self.font, int(self.font_size // 2)), activebackground=self.blue_bg, activeforeground="#ffffff").pack(side='right', padx=5)
 
         if display_type == 'betweeness':
@@ -1741,7 +1747,7 @@ class PipeReplacementTool:
         window_frame.grid_propagate(False)
         
         # Center the window
-        window_width = self.screen_width // 3.5
+        window_width = self.screen_width // 2.5
         window_height = self.screen_height // 4.5
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
