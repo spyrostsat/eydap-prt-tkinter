@@ -16,6 +16,9 @@ def is_valid_project_name(project_name: str) -> bool:
 
 
 def copy_shapefile(shp_type: str, src_path: str, project_folder: str) -> str:
+    '''
+    Copy the shapefile to the project folder and return the new path of the shapefile.
+    '''
     if shp_type not in ["network", "damage"]:
         raise ValueError("Invalid shapefile type")
 
@@ -40,17 +43,20 @@ def shapefile_bare_name(src_path: str) -> str:
 
 
 def updates_scenarios_config_file(scenario_folder: str, name: str, description: str) -> None:
-    # Open a json file called .prt.conf or create one if it doesn't exist and save the project folder path and update timestamp
-    # This file should already contain the info of other previous projects if they exist so we need to read the file first
+    '''
+    The function opens a json file called .prt.conf or creates one if it doesn't exist and saves the project folder path and updates timestamp
+    This file should already contain the info of other previous projects if they exist so we need to read the file first    
+    '''
     config_file = os.path.join(os.path.expanduser("~"), ".prt.conf")
+    
+    data: List[Dict] = []
+    
     if os.path.exists(config_file):
         with open(config_file, "r") as f:
             data = json.load(f)
-    else:
-        data = []
-        
-    # Check if the project folder is already in the list
-    project_exists = False
+    
+    project_exists = False   # Check if the project folder is already in the list
+    
     for project in data:
         if project["project_folder"] == scenario_folder:
             project_exists = True
@@ -66,6 +72,8 @@ def updates_scenarios_config_file(scenario_folder: str, name: str, description: 
     else:
         for project in data:
             if project["project_folder"] == scenario_folder:
+                project["name"] = name
+                project["description"] = description
                 project["timestamp"] = time.time()
                 break
 
@@ -77,6 +85,7 @@ def read_scenarios_config_file() -> List[Dict]:
     # Open a json file called .prt.conf or create one if it doesn't exist and save the project folder path and update timestamp
     # This file should already contain the info of other previous projects if they exist so we need to read the file first
     config_file = os.path.join(os.path.expanduser("~"), ".prt.conf")
+    
     if os.path.exists(config_file):
         with open(config_file, "r") as f:
             data = json.load(f)
@@ -127,6 +136,17 @@ def generate_distinct_colors(start: int, end: int) -> Dict[str, str]:
     
     return gradient_dict
 
+
+def find_option_index(list_to_search: List[Dict], name: str) -> int:
+    if not list_to_search or not isinstance(list_to_search, list): return -1
+    
+    if 'name' not in list_to_search[0]: return -1
+    
+    for i, option in enumerate(list_to_search):
+        if option['name'] == name:
+            return i
+
+    return -1
 
 class RedirectOutput:
     def __init__(self, text_widget):
