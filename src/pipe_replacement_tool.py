@@ -35,6 +35,7 @@ class PipeReplacementTool:
 
     def ui_elements(self):
         self.font = "Sans"
+        self.courier_font = "Courier 10 Pitch"
         self.font_size = 18
         
         self.box_width = 1
@@ -185,14 +186,14 @@ class PipeReplacementTool:
         
         def browse(browse_type: str) -> None:
             if browse_type == "save_folder":
-                folder = filedialog.askdirectory(title="Select a folder to save the scenario")
+                folder = filedialog.askdirectory(parent=window, title="Select a folder to save the scenario")
                 
                 if folder:
                     save_folder_entry.delete(0, tk.END)
                     save_folder_entry.insert(tk.END, folder)
             
             elif browse_type in ["network", "damage"]:
-                filename = filedialog.askopenfilename(filetypes=[("Shapefiles", "*.shp")])
+                filename = filedialog.askopenfilename(parent=window, filetypes=[("Shapefiles", "*.shp")])
                 
                 if filename:
                     if browse_type == "network":
@@ -318,7 +319,7 @@ class PipeReplacementTool:
             folder = filedialog.askdirectory()
             if not folder:
                 return
-        else: 
+        else:
             folder = project_folder
         
         metadata_file = os.path.join(folder, "metadata.json")
@@ -583,7 +584,7 @@ class PipeReplacementTool:
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
 
-        tk.Label(window_frame, text=info, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5))).pack(expand=True, fill='both')
+        tk.Label(window_frame, text=info, bg=self.bg, fg=self.fg, font=(self.courier_font, int(self.font_size // 1.5))).pack(expand=True, fill='both')
 
         window.transient(self.root)
         window.grab_set()
@@ -600,38 +601,38 @@ class PipeReplacementTool:
         
         window = tk.Toplevel(self.root)
         window.title("Scenario Information")
-        window.resizable(False, False)     
+        window.resizable(False, False)
         
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
 
-        window_width = self.screen_width // 2.2
+        window_width = self.screen_width // 1.5
         window_height = self.screen_height // 4.5
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
         
-        tk.Label(window_frame, text="Scenario Name:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=0, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=self.project_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=0, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Scenario Name:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=0, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=self.project_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=0, column=1, padx=15, pady=5, sticky='w')
         
-        tk.Label(window_frame, text="Description:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=1, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=self.project_description, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=1, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Description:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=1, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=self.project_description, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=1, column=1, padx=15, pady=5, sticky='w')
         
-        tk.Label(window_frame, text="Project Folder:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=2, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=self.project_folder, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=2, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Project Folder:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=2, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=self.project_folder, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=2, column=1, padx=15, pady=5, sticky='w')
         
-        tk.Label(window_frame, text="Network Shapefile:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=3, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=self.network_shapefile, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=3, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Network Shapefile:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=3, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=self.network_shapefile, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=3, column=1, padx=15, pady=5, sticky='w')
         
-        tk.Label(window_frame, text="Damage Shapefile:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=4, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=self.damage_shapefile, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=4, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Damage Shapefile:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=4, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=self.damage_shapefile, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=4, column=1, padx=15, pady=5, sticky='w')
         
-        tk.Label(window_frame, text="Timestamp:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=5, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=time.ctime(scenario_timestamp), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=5, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Timestamp:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=5, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=time.ctime(scenario_timestamp), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=5, column=1, padx=15, pady=5, sticky='w')
 
-        tk.Label(window_frame, text="Coordinate System:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=6, column=0, padx=15, pady=5)
-        tk.Label(window_frame, text=TARGET_CRS, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=6, column=1, padx=15, pady=5)
+        tk.Label(window_frame, text="Coordinate System:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=6, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text=TARGET_CRS, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=6, column=1, padx=15, pady=5, sticky='w')
 
         # Require the user to close the window before interacting with the main window
         window.transient(self.root)
@@ -646,16 +647,13 @@ class PipeReplacementTool:
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
-
-        window_width = self.screen_width // 2.5
-        window_height = self.screen_height // 6
-        x = (self.screen_width / 2) - (window_width / 2)
-        y = (self.screen_height / 2) - (window_height / 2)
-        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
         
-        tk.Label(window_frame, text="Pipe Replacement Tool Version 2.0", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
-        tk.Label(window_frame, text="Developed by UWMH", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
-        tk.Label(window_frame, text="Map data © OpenStreetMap contributors", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
+        padx = 20
+        pady = 7
+        
+        tk.Label(window_frame, text="Pipe Replacement Tool Version 2.0", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(padx=padx, pady=pady)
+        tk.Label(window_frame, text="Developed by UWMH", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(padx=padx, pady=pady)
+        tk.Label(window_frame, text="Map data © OpenStreetMap contributors", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(padx=padx, pady=pady)
 
         # Require the user to close the window before interacting with the main window
         window.transient(self.root)
@@ -681,7 +679,7 @@ class PipeReplacementTool:
         self.splash.configure(bg=self.blue_bg)
         self.splash.config(cursor="watch")
         self.splash.overrideredirect(True)  # Remove the close, maximize, and minimize buttons
-        self.splash_logo_image = tk.PhotoImage(file='logo_old.png')
+        self.splash_logo_image = tk.PhotoImage(file='logo.png')
         
         self.logo_label = tk.Label(self.splash, bg=self.blue_bg, image=self.splash_logo_image)
         self.logo_label.pack(expand=True)
@@ -692,7 +690,7 @@ class PipeReplacementTool:
         self.splash.update()
         self.root.update()
 
-        time.sleep(2)
+        # time.sleep(2)
         self.landing_page(from_splash=True)
         
     
@@ -728,7 +726,7 @@ class PipeReplacementTool:
         self.recent_scenarios_frame.pack()
         self.recent_scenarios_frame.grid_propagate(False)
         
-        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10)
+        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10, pady=10)
         
         # Display a datatable with the recent scenarios
         scenarios: List[Dict] = read_scenarios_config_file()
@@ -736,13 +734,15 @@ class PipeReplacementTool:
         self.recent_scenarios = ttk.Treeview(self.recent_scenarios_frame, columns=['project_folder', 'name', 'timestamp'], show="headings")
         self.recent_scenarios.bind("<Double-1>", lambda event: self.tv_on_double_click(event))
         
-        self.recent_scenarios.heading('project_folder', text='Project Path', anchor='center')
-        self.recent_scenarios.heading('name', text='Project Name', anchor='center')
-        self.recent_scenarios.heading('timestamp', text='Timestamp', anchor='center')
-        self.recent_scenarios.grid(row=1, column=0, padx=10, pady=10)
-        self.recent_scenarios.column('project_folder', width=int(self.width * 0.25), anchor='center')
-        self.recent_scenarios.column('name', width=int(self.width * 0.25), anchor='center')
-        self.recent_scenarios.column('timestamp', width=int(self.width * 0.25), anchor='center')
+        anchor_side = 'w'
+        
+        self.recent_scenarios.heading('project_folder', text='Project Path', anchor=anchor_side)
+        self.recent_scenarios.heading('name', text='Project Name', anchor=anchor_side)
+        self.recent_scenarios.heading('timestamp', text='Timestamp', anchor=anchor_side)
+        self.recent_scenarios.grid(row=1, column=0)
+        self.recent_scenarios.column('project_folder', width=int(self.width * 0.25), anchor=anchor_side)
+        self.recent_scenarios.column('name', width=int(self.width * 0.25), anchor=anchor_side)
+        self.recent_scenarios.column('timestamp', width=int(self.width * 0.25), anchor=anchor_side)
         
         if scenarios:
             scenarios = sorted(scenarios, key=lambda x: x["timestamp"], reverse=True)
@@ -833,19 +833,15 @@ class PipeReplacementTool:
         
         for option in menu_options:
             if not option["leaf"]:
-                if option['active']:
-                    self.menu_tree.insert("", "end", text=option['name'], tags=('active', 'bold-large'))
-                else:
-                    self.menu_tree.insert("", "end", text=option['name'], tags=('inactive', 'large'))
-            
+                self.menu_tree.insert("", "end", text=option['name'], tags=('active', 'bold-large'))
             else:
                 if option['active']:
-                    self.menu_tree.insert("", "end", text=f"{MENU_SPACES} {option['name']}", tags=('active'))
+                    self.menu_tree.insert("", "end", text=f"{MENU_SPACES} {option['name']}", tags=('active', 'normal-medium'))
                 else:
-                    self.menu_tree.insert("", "end", text=f"{MENU_SPACES} {option['name']}", tags=('inactive'))
+                    self.menu_tree.insert("", "end", text=f"{MENU_SPACES} {option['name']}", tags=('inactive', 'normal-medium'))
         
-        self.menu_tree.tag_configure('bold-large', font=(self.font, int(self.font_size // 1.6), 'bold'))
-        self.menu_tree.tag_configure('large', font=(self.font, int(self.font_size // 1.6)))
+        self.menu_tree.tag_configure('bold-large', font=(self.font, int(self.font_size // 1.7), 'bold'))
+        self.menu_tree.tag_configure('normal-medium', font=(self.font, int(self.font_size // 2)))
         self.menu_tree.tag_configure('active', foreground='black')
         self.menu_tree.tag_configure('inactive', foreground='#bfbfbf')
 
@@ -888,37 +884,41 @@ class PipeReplacementTool:
         for widget in self.right_frame.winfo_children():
             widget.destroy()
         
-        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5))).pack(pady=20)
+        padx_title = 15
+        padx_content = 40
+        pady = 10
+        
+        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.2), 'bold')).pack(pady=35)
         
         if self.closeness_metric or self.betweeness_metric or self.bridges_metric:
-            tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
-            tk.Label(self.right_frame, text=f"Normalised closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-            tk.Label(self.right_frame, text=f"Normalised betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-            tk.Label(self.right_frame, text=f"Normalised bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
+            tk.Label(self.right_frame, text=f"Normalised closeness metric: {self.closeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
+            tk.Label(self.right_frame, text=f"Normalised betweeness metric: {self.betweeness_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
+            tk.Label(self.right_frame, text=f"Normalised bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
         
         else:
-            tk.Label(self.right_frame, text=f"-", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text=f"-", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(padx=5, pady=pady)
         
         if self.cell_lower_bound: 
-            tk.Label(self.right_frame, text="Combined metrics/damages", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
-            tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+            tk.Label(self.right_frame, text="Combined metrics/damages", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
+            tk.Label(self.right_frame, text=f"Cell lower bound: {self.cell_lower_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
         
-        if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.combined_metric_weight: tk.Label(self.right_frame, text=f"Combined metric weight: {self.combined_metric_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
-        if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+        if self.cell_upper_bound: tk.Label(self.right_frame, text=f"Cell upper bound: {self.cell_upper_bound}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
+        if self.combined_metric_weight: tk.Label(self.right_frame, text=f"Combined metric weight: {self.combined_metric_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
+        if self.failures_weight: tk.Label(self.right_frame, text=f"Failures weight: {self.failures_weight:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
         
         if self.select_square_size: 
-            tk.Label(self.right_frame, text="Optimal / Selected cell size", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
-            tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(pady=5)
+            tk.Label(self.right_frame, text="Optimal / Selected cell size", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
+            tk.Label(self.right_frame, text=f"Selected square size: {self.select_square_size}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2))).pack(padx=padx_content, pady=pady, anchor='w')
 
         if self.step3_finished:
-            tk.Label(self.right_frame, text="LCC optimization", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2), 'bold')).pack(pady=5)
+            tk.Label(self.right_frame, text="LCC optimization", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
             base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
             optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
             
             self.right_frame.update_idletasks()
             right_frame_width = self.right_frame.winfo_width()
-            tk.Label(self.right_frame, text=f"Optimized cells: {', '.join(optimized_cells)}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2)), wraplength=int(right_frame_width* 0.9)).pack(pady=5)
+            tk.Label(self.right_frame, text=f"Optimized cells: {', '.join(optimized_cells)}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 2)), wraplength=int(right_frame_width* 0.9)).pack(padx=padx_content, pady=pady, anchor='w')
 
 
     def update_middle_frame(self, display_type: str, *args):
@@ -937,6 +937,9 @@ class PipeReplacementTool:
             for index, line_path in enumerate(self.network_pipes_lines_paths):
                 pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
                 map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
+
+            # Reset map button
+            tk.Button(self.middle_frame, text=RESET_MAP_TEXT, command=lambda: map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2])), bg=self.blue_bg, fg="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 2))).pack(anchor=RESET_MAP_ANCHOR, padx=RESET_MAP_PADX, pady=RESET_MAP_PADY)
         
             tk.Label(self.middle_frame, text="Pipe Material", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
@@ -953,6 +956,9 @@ class PipeReplacementTool:
             marker_img = tk.PhotoImage(file="marker.png").subsample(9, 9)
             for index, point in enumerate(self.damages_points):
                 map_widget.set_marker(point[0], point[1], data=int(self.damages_shapefile_attributes['KOD_VLAVIS'][index]), command=self.handle_marker_click, icon=marker_img, marker_color_circle=None, marker_color_outside=None)
+        
+            # Reset map button
+            tk.Button(self.middle_frame, text=RESET_MAP_TEXT, command=lambda: map_widget.fit_bounding_box((self.damages_bounding_box[3], self.damages_bounding_box[0]), (self.damages_bounding_box[1], self.damages_bounding_box[2])), bg=self.blue_bg, fg="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 2))).pack(anchor=RESET_MAP_ANCHOR, padx=RESET_MAP_PADX, pady=RESET_MAP_PADY)
         
         if display_type == "optimized_cells":
             data = extract_optimized_cells_data(os.path.join(self.project_folder, "Cell_optimization_results"))
@@ -974,6 +980,9 @@ class PipeReplacementTool:
                 for index, line_path in enumerate(value['pipes_lines_paths']):
                     pipe_color = pipes_colors[str(value['attributes']['t_opt'][index])]
                     map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['ID'][index], value['attributes']['t_opt'][index], cell_number), command=self.handle_optimized_cell_click)
+
+            # Reset map button
+            tk.Button(self.middle_frame, text=RESET_MAP_TEXT, command=lambda: map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2])), bg=self.blue_bg, fg="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 2))).pack(anchor=RESET_MAP_ANCHOR, padx=RESET_MAP_PADX, pady=RESET_MAP_PADY)
 
             tk.Label(self.middle_frame, text="Replacement Year", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
@@ -1001,13 +1010,16 @@ class PipeReplacementTool:
                 pipe_color = pipes_colors[str(int(attributes['cluster'][index]))]
                 map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(attributes['ID'][index], attributes['cluster'][index], cell_number), command=self.handle_pipe_grouping_click)
 
+            # Reset map button
+            tk.Button(self.middle_frame, text=RESET_MAP_TEXT, command=lambda: map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2])), bg=self.blue_bg, fg="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 2))).pack(anchor=RESET_MAP_ANCHOR, padx=RESET_MAP_PADX, pady=RESET_MAP_PADY)
+
             tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
             
-            tk.Button(self.middle_frame, text="Continuous Pipe Segments Results", command=lambda: self.show_pipe_grouping_info(info_path), bg=self.blue_bg, fg="#ffffff", font=(self.font, int(self.font_size // 2)), activebackground=self.blue_bg, activeforeground="#ffffff").pack(side='right', padx=5)
+            tk.Button(self.middle_frame, text="Continuous Pipe Segments Results", command=lambda: self.show_pipe_grouping_info(info_path), bg=self.blue_bg, fg="#ffffff", font=(self.font, int(self.font_size // 2)), activebackground=self.blue_bg, activeforeground="#ffffff").pack(side='right', padx=RESET_MAP_PADX)
 
         if display_type == 'betweeness':
             img = Image.open(args[0])
@@ -1153,7 +1165,6 @@ class PipeReplacementTool:
             
             output_path = self.project_folder
             
-            # TODO: need to check with the team why the results are always the same
             gdf, G, nodes, edges, df_metrics = process_shapefile(self.network_shapefile, closeness, betweeness, bridges, output_path)
             self.edges = edges
             
@@ -1179,7 +1190,9 @@ class PipeReplacementTool:
             info_label.config(text="Topological analysis finished", fg=self.success_bg)
             self.save_scenario(show_message=False)
             self.update_right_frame()
-
+            
+            window.after(WIN_WAIT_BEFORE_CLOSE, window.destroy)
+            
         
         window = tk.Toplevel(self.root)
         
@@ -1188,6 +1201,10 @@ class PipeReplacementTool:
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+        
+        window.update()
+        window.transient(self.root)
+        window.grab_set()
 
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
@@ -1240,6 +1257,8 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=4)
+        
+        window.wait_window(window)
     
     
     def combined_metrics(self):
@@ -1281,18 +1300,24 @@ class PipeReplacementTool:
             window.update()
             self.update_right_frame()
             
+            window.after(WIN_WAIT_BEFORE_CLOSE, window.destroy)
+            
         
         window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
         
-        # Center the window
         window_width = self.screen_width // 1.5
         window_height = self.screen_height // 2.2
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        window.update()
+        window.transient(self.root)
+        window.grab_set()
+
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
         
         weight_lower_bound = 0
         weight_upper_bound = 1
@@ -1348,6 +1373,8 @@ class PipeReplacementTool:
         
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=4, column=0, columnspan=5, padx=5, pady=20)
+        
+        window.wait_window(window)
     
     
     def selected_cell_size(self):
@@ -1375,18 +1402,24 @@ class PipeReplacementTool:
             window.update()
             self.update_right_frame()
             
+            window.after(WIN_WAIT_BEFORE_CLOSE, window.destroy)
+            
         
         window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
         
-        # Center the window
         window_width = self.screen_width // 2.8
         window_height = self.screen_height // 3.2
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+        
+        window.update()
+        window.transient(self.root)
+        window.grab_set()
+
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
 
         best_cell_size_label = tk.Label(window_frame, text=f"The best cell size found by the analysis is: {self.best_square_size} m.", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         best_cell_size_label.grid(row=0, column=0, padx=5, pady=20, columnspan=4)
@@ -1411,6 +1444,8 @@ class PipeReplacementTool:
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         info_label.grid(row=3, column=0, padx=5, pady=10, columnspan=4)
+        
+        window.wait_window(window)
 
 
     def lcc_optimization(self):
@@ -1514,19 +1549,25 @@ class PipeReplacementTool:
             self.save_scenario(show_message=False)
             window.update()
             self.update_right_frame()
+            
+            window.after(WIN_WAIT_BEFORE_CLOSE, window.destroy)
         
         
         window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
-        
-        # Center the window
+
         window_width = self.screen_width // 2
         window_height = self.screen_height
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        window.update()
+        window.transient(self.root)
+        window.grab_set()
+
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
 
         pipe_materials_label = tk.Label(window_frame, text=f"Insert lifespan of pipe materials", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=4)
@@ -1598,6 +1639,8 @@ class PipeReplacementTool:
         redirected_output = tk.Text(window_frame, wrap='word', height=8, fg=self.fg, font=(self.font, int(self.font_size // 2)))
         redirected_output.grid(row=index+7, column=0, padx=5, pady=10, columnspan=4)
         sys.stdout = RedirectOutput(redirected_output)
+        
+        window.wait_window(window)
 
 
     def decision_support_tool(self):
@@ -1758,6 +1801,8 @@ class PipeReplacementTool:
         
             info_label.config(text="Calculations finished!", fg=self.success_bg)
             window.update()
+            
+            window.after(WIN_WAIT_BEFORE_CLOSE, window.destroy)
         
         
         selected_optimized_cell = None
@@ -1773,16 +1818,20 @@ class PipeReplacementTool:
         output_shp_name_entry = None
         
         window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
         
-        # Center the window
         window_width = self.screen_width // 1.7
         window_height = self.screen_height // 2.5
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
+        window.update()
+        window.transient(self.root)
+        window.grab_set()
+
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
         
         base_folder = os.path.join(self.project_folder, "Cell_optimization_results")
         optimized_cells = [f.split('_')[-1] for f in os.listdir(base_folder) if os.path.isdir(os.path.join(base_folder, f))]
@@ -1796,6 +1845,8 @@ class PipeReplacementTool:
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Proceed", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=cell_click)
         run_button.grid(row=1, column=0, padx=5, pady=10, columnspan=3)
+
+        window.wait_window(window)
 
 
     def pipe_grouping(self):

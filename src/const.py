@@ -1,6 +1,13 @@
 SRC_CRS = "EPSG:2100"
 TARGET_CRS = "EPSG:4326"
 
+WIN_WAIT_BEFORE_CLOSE = 700  # After the calculations of a popup window finish, the window will close after this time in ms
+
+RESET_MAP_PADX = 50
+RESET_MAP_PADY = 10
+RESET_MAP_ANCHOR = "w"
+RESET_MAP_TEXT = "Reset map"
+
 MENU_SPACES = "       "
 
 MATERIAL_COLORS = {
