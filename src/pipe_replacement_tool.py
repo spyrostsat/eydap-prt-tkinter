@@ -692,7 +692,7 @@ class PipeReplacementTool:
         self.splash.update()
         self.root.update()
 
-        # time.sleep(2)
+        time.sleep(2)
         self.landing_page(from_splash=True)
         
     
