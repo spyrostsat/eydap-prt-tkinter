@@ -585,6 +585,10 @@ class PipeReplacementTool:
 
         tk.Label(window_frame, text=info, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5))).pack(expand=True, fill='both')
 
+        window.transient(self.root)
+        window.grab_set()
+        window.wait_window()
+
 
     def show_scenario_info(self):
         scenario_timestamp = None
@@ -596,7 +600,8 @@ class PipeReplacementTool:
         
         window = tk.Toplevel(self.root)
         window.title("Scenario Information")
-        window.resizable(False, False)
+        window.resizable(False, False)     
+        
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
@@ -628,6 +633,11 @@ class PipeReplacementTool:
         tk.Label(window_frame, text="Coordinate System:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=6, column=0, padx=15, pady=5)
         tk.Label(window_frame, text=TARGET_CRS, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=6, column=1, padx=15, pady=5)
 
+        # Require the user to close the window before interacting with the main window
+        window.transient(self.root)
+        window.grab_set()
+        window.wait_window()
+
 
     def show_about_info(self):
         window = tk.Toplevel(self.root)
@@ -646,6 +656,11 @@ class PipeReplacementTool:
         tk.Label(window_frame, text="Pipe Replacement Tool Version 2.0", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
         tk.Label(window_frame, text="Developed by UWMH", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
         tk.Label(window_frame, text="Map data © OpenStreetMap contributors", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(pady=10)
+
+        # Require the user to close the window before interacting with the main window
+        window.transient(self.root)
+        window.grab_set()
+        window.wait_window()
         
 
     def splash_screen(self):
@@ -677,7 +692,7 @@ class PipeReplacementTool:
         self.splash.update()
         self.root.update()
 
-        time.sleep(2)
+        # time.sleep(2)
         self.landing_page(from_splash=True)
         
     
@@ -756,9 +771,8 @@ class PipeReplacementTool:
         top_frame = tk.Frame(self.root, width=self.width, height=int(self.height * 0.15))
         top_frame.grid(row=0, column=0, columnspan=3, sticky="nsew")
         
-        # Insert the project name and description
         label_text = f"{self.project_name}"
-        tk.Label(top_frame, text=label_text, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size / 1.7)), padx=10, pady=10).pack(expand=True, fill='both')
+        tk.Label(top_frame, text=label_text, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size / 1.7), 'bold'), padx=10, pady=10).pack(expand=True, fill='both')
     
         # Create and place the frames
         self.top_height = int(self.height * 0.7)
@@ -924,7 +938,7 @@ class PipeReplacementTool:
                 pipe_color = MATERIAL_COLORS[self.network_shapefile_attributes['MATERIAL'][index]]
                 map_widget.set_path(position_list=line_path, color=pipe_color, width=3, name=index, command=self.handle_pipe_line_click)
         
-            tk.Label(self.middle_frame, text="Pipe Material", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            tk.Label(self.middle_frame, text="Pipe Material", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
             for material, color in MATERIAL_COLORS.items():
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
@@ -961,7 +975,8 @@ class PipeReplacementTool:
                     pipe_color = pipes_colors[str(value['attributes']['t_opt'][index])]
                     map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(value['attributes']['ID'][index], value['attributes']['t_opt'][index], cell_number), command=self.handle_optimized_cell_click)
 
-            tk.Label(self.middle_frame, text="Replacement Year", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            tk.Label(self.middle_frame, text="Replacement Year", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
+            
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
@@ -986,7 +1001,7 @@ class PipeReplacementTool:
                 pipe_color = pipes_colors[str(int(attributes['cluster'][index]))]
                 map_widget.set_path(position_list=line_path, width=3, color=pipe_color, data=(attributes['ID'][index], attributes['cluster'][index], cell_number), command=self.handle_pipe_grouping_click)
 
-            tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=60)
+            tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
@@ -1138,6 +1153,7 @@ class PipeReplacementTool:
             
             output_path = self.project_folder
             
+            # TODO: need to check with the team why the results are always the same
             gdf, G, nodes, edges, df_metrics = process_shapefile(self.network_shapefile, closeness, betweeness, bridges, output_path)
             self.edges = edges
             
@@ -1166,39 +1182,65 @@ class PipeReplacementTool:
 
         
         window = tk.Toplevel(self.root)
-        window_frame = tk.Frame(window, bg=self.bg)
-        window_frame.pack(expand=True, fill='both')
-        window_frame.grid_propagate(False)
         
-        # Center the window
-        window_width = self.screen_width // 2.5
+        window_width = self.screen_width // 1.9
         window_height = self.screen_height // 2
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
-                
+
+        window_frame = tk.Frame(window, bg=self.bg)
+        window_frame.pack(expand=True, fill='both')
+        window_frame.grid_propagate(False)
+        
+        lowest_value = 0
+        highest_value = 1
+        step = 0.01
+        slider_percentage = 0.6
+        
         closeness_label = tk.Label(window_frame, text="Closeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         closeness_label.grid(row=0, column=0, padx=5, pady=20)
-        closeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
-        closeness_slider.grid(row=0, column=1, padx=5, pady=20)
+        
+        closeness_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        closeness_lower_bound.grid(row=0, column=1, padx=5, pady=20)
+        
+        closeness_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
+        closeness_slider.grid(row=0, column=2, padx=5, pady=20)
+
+        closeness_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        closeness_upper_bound.grid(row=0, column=3, padx=5, pady=20)
         
         betweeness_label = tk.Label(window_frame, text="Betweeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         betweeness_label.grid(row=1, column=0, padx=5, pady=20)
-        betweeness_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
-        betweeness_slider.grid(row=1, column=1, padx=5, pady=20)
+        
+        betweeness_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        betweeness_lower_bound.grid(row=1, column=1, padx=5, pady=20)
+        
+        betweeness_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
+        betweeness_slider.grid(row=1, column=2, padx=5, pady=20)
+        
+        betweeness_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        betweeness_upper_bound.grid(row=1, column=3, padx=5, pady=20)
         
         bridges_label = tk.Label(window_frame, text="Bridges metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         bridges_label.grid(row=2, column=0, padx=5, pady=20)
-        bridges_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.7 * window_width), resolution=0.01)
-        bridges_slider.grid(row=2, column=1, padx=5, pady=20)
+        
+        bridges_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        bridges_lower_bound.grid(row=2, column=1, padx=5, pady=20)
+        
+        bridges_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
+        bridges_slider.grid(row=2, column=2, padx=5, pady=20)
+        
+        bridges_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        bridges_upper_bound.grid(row=2, column=3, padx=5, pady=20)
         
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=run_topological_analysis)
-        run_button.grid(row=3, column=0, padx=5, pady=20, columnspan=2)
+        run_button.grid(row=3, column=0, padx=5, pady=20, columnspan=4)
         
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=2)
-        
+        info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=4)
+    
     
     def combined_metrics(self):
         
@@ -1251,16 +1293,25 @@ class PipeReplacementTool:
         x = (self.screen_width / 2) - (window_width / 2)
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+        
+        weight_lower_bound = 0
+        weight_upper_bound = 1
                 
         combined_metric_failures_label_1 = tk.Label(window_frame, text="Weighted average combined metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         combined_metric_failures_label_1.grid(row=0, column=0, padx=5, pady=20)
         
-        combined_metric_failures_slider = tk.Scale(window_frame, from_=0, to=1, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=0.01)
-        combined_metric_failures_slider.grid(row=0, column=1, padx=5, pady=20)
+        combined_lower_value = tk.Label(window_frame, text=str(weight_lower_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        combined_lower_value.grid(row=0, column=1, padx=5, pady=20)
+        
+        combined_metric_failures_slider = tk.Scale(window_frame, from_=weight_lower_bound, to=weight_upper_bound, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=0.01)
+        combined_metric_failures_slider.grid(row=0, column=2, padx=5, pady=20)
         combined_metric_failures_slider.set(0.5)
         
+        combined_upper_value = tk.Label(window_frame, text=str(weight_upper_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        combined_upper_value.grid(row=0, column=3, padx=5, pady=20)
+        
         combined_metric_failures_label_2 = tk.Label(window_frame, text="Failures weight", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        combined_metric_failures_label_2.grid(row=0, column=2, padx=5, pady=20)
+        combined_metric_failures_label_2.grid(row=0, column=4, padx=5, pady=20)
         
         cell_min_size = 100
         cell_max_size = 1000
@@ -1268,23 +1319,35 @@ class PipeReplacementTool:
         
         cell_lower_bound_label = tk.Label(window_frame, text="Cell lower bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         cell_lower_bound_label.grid(row=1, column=0, padx=5, pady=20)
+        
+        cell_lower_bound_low_value = tk.Label(window_frame, text=str(cell_min_size), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_lower_bound_low_value.grid(row=1, column=1, padx=5, pady=20)
+        
         cell_lower_bound_slider = tk.Scale(window_frame, from_=cell_min_size, to=cell_max_size, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=resolution)
-        cell_lower_bound_slider.grid(row=1, column=1, padx=5, pady=20)
+        cell_lower_bound_slider.grid(row=1, column=2, padx=5, pady=20)
         cell_lower_bound_slider.set(cell_min_size)
+        
+        cell_lower_bound_upper_value = tk.Label(window_frame, text=str(cell_max_size), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_lower_bound_upper_value.grid(row=1, column=3, padx=5, pady=20)
         
         cell_upper_bound_label = tk.Label(window_frame, text="Cell upper bound", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         cell_upper_bound_label.grid(row=2, column=0, padx=5, pady=20)
+        
+        cell_upper_bound_low_value = tk.Label(window_frame, text=str(cell_min_size + resolution), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_upper_bound_low_value.grid(row=2, column=1, padx=5, pady=20)
+        
         cell_upper_bound_slider = tk.Scale(window_frame, from_=cell_min_size + resolution, to=cell_max_size, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=resolution)
-        cell_upper_bound_slider.grid(row=2, column=1, padx=5, pady=20)
+        cell_upper_bound_slider.grid(row=2, column=2, padx=5, pady=20)
         cell_upper_bound_slider.set(cell_max_size)
         
-        # Add the 'Run' button to the window
-        run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_combined_analysis)
-        run_button.grid(row=3, column=1, padx=5, pady=20)
+        cell_upper_bound_upper_value = tk.Label(window_frame, text=str(cell_max_size), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_upper_bound_upper_value.grid(row=2, column=3, padx=5, pady=20)
         
-        # Info label
+        run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_combined_analysis)
+        run_button.grid(row=3, column=0, columnspan=5, padx=5, pady=20)
+        
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        info_label.grid(row=4, column=1, padx=5, pady=20)
+        info_label.grid(row=4, column=0, columnspan=5, padx=5, pady=20)
     
     
     def selected_cell_size(self):
@@ -1326,22 +1389,28 @@ class PipeReplacementTool:
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
 
         best_cell_size_label = tk.Label(window_frame, text=f"The best cell size found by the analysis is: {self.best_square_size} m.", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        best_cell_size_label.grid(row=0, column=0, padx=5, pady=20, columnspan=2)
+        best_cell_size_label.grid(row=0, column=0, padx=5, pady=20, columnspan=4)
                 
         selected_cell_size_label = tk.Label(window_frame, text="Final cell size", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         selected_cell_size_label.grid(row=1, column=0, padx=5, pady=20)
-        selected_cell_size_slider = tk.Scale(window_frame, from_=self.cell_lower_bound, to=self.cell_upper_bound, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
-        selected_cell_size_slider.grid(row=1, column=1, padx=5, pady=20)        
         
+        cell_size_lower_value = tk.Label(window_frame, text=str(self.cell_lower_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_size_lower_value.grid(row=1, column=1, padx=5, pady=20)
+        
+        selected_cell_size_slider = tk.Scale(window_frame, from_=self.cell_lower_bound, to=self.cell_upper_bound, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=100)
+        selected_cell_size_slider.grid(row=1, column=2, padx=5, pady=20)
         selected_cell_size_slider.set(self.best_square_size)
+        
+        cell_size_upper_value = tk.Label(window_frame, text=str(self.cell_upper_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        cell_size_upper_value.grid(row=1, column=3, padx=5, pady=20)
         
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=run_analysis)
-        run_button.grid(row=2, column=1, padx=5, pady=10, columnspan=2)
+        run_button.grid(row=2, column=0, padx=5, pady=10, columnspan=4)
         
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        info_label.grid(row=3, column=1, padx=5, pady=10, columnspan=2)
+        info_label.grid(row=3, column=0, padx=5, pady=10, columnspan=4)
 
 
     def lcc_optimization(self):
@@ -1426,7 +1495,7 @@ class PipeReplacementTool:
             
             algorithm = NSGA2(pop_size=pop_size, n_offsprings=n_offsprings, sampling=IntegerRandomSampling(), crossover=SBX(prob=0.9, eta=15, repair=RoundingRepair()), mutation=PM(eta=20, repair=RoundingRepair()), eliminate_duplicates=True)
             
-            info_label.config(text=f"Optimizing cell {cell_index}. This may take a while. Total number of generations: {n_gen}", fg=self.fg)
+            info_label.config(text=f"Optimizing cell {cell_index}. This will take some time. Total number of generations: {n_gen}", fg=self.fg)
             run_button.config(state=tk.DISABLED)
             window.update()
             
@@ -1460,31 +1529,51 @@ class PipeReplacementTool:
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
 
         pipe_materials_label = tk.Label(window_frame, text=f"Insert lifespan of pipe materials", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=2)
+        pipe_materials_label.grid(row=0, column=0, padx=5, pady=20, columnspan=4)
                 
         pipe_materials = {}
         for index, material_name in enumerate(self.unique_pipe_materials_names):
             material_label = tk.Label(window_frame, text=material_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-            material_label.grid(row=index+1, column=0, padx=5, pady=10)
+            material_label.grid(row=index+1, column=0, padx=5, pady=10, columnspan=2)
             
             pipe_materials[material_name] = tk.Entry(window_frame)
-            pipe_materials[material_name].grid(row=index+1, column=1, padx=5, pady=10)
+            pipe_materials[material_name].grid(row=index+1, column=1, padx=5, pady=10, columnspan=2)
             pipe_materials[material_name].insert(0, self.pipe_materials[material_name])
         
-        contract_lifespan_label = tk.Label(window_frame, text="Insert lifespan of contract work", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        contract_work_lower_bound = 5
+        contract_work_upper_bound = 15
+        
+        contract_lifespan_label = tk.Label(window_frame, text="Insert lifespan of contract work    ", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         contract_lifespan_label.grid(row=index+2, column=0, padx=5, pady=20)
-        contract_lifespan_slider = tk.Scale(window_frame, from_=5, to=15, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
-        contract_lifespan_slider.grid(row=index+2, column=1, padx=5, pady=20)
+        
+        contract_lifespan_lower_bound = tk.Label(window_frame, text=str(contract_work_lower_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        contract_lifespan_lower_bound.grid(row=index+2, column=1, padx=5, pady=20)
+        
+        contract_lifespan_slider = tk.Scale(window_frame, from_=contract_work_lower_bound, to=contract_work_upper_bound, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
+        contract_lifespan_slider.grid(row=index+2, column=2, padx=5, pady=20)
+        
+        contract_lifespan_upper_bound = tk.Label(window_frame, text=str(contract_work_upper_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        contract_lifespan_upper_bound.grid(row=index+2, column=3, padx=5, pady=20)
         
         if self.contract_lifespan:
             contract_lifespan_slider.set(self.contract_lifespan)
         else:
             contract_lifespan_slider.set(10)
         
-        time_relaxation_label = tk.Label(window_frame, text="Allowable time span relaxation", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        time_relax_lower_bound = 2
+        time_relax_upper_bound = 5
+        
+        time_relaxation_label = tk.Label(window_frame, text="Allowable time span relaxation    ", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         time_relaxation_label.grid(row=index+3, column=0, padx=5, pady=20)
-        time_relaxation_slider = tk.Scale(window_frame, from_=2, to=5, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
-        time_relaxation_slider.grid(row=index+3, column=1, padx=5, pady=20)
+        
+        time_lower = tk.Label(window_frame, text=str(time_relax_lower_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        time_lower.grid(row=index+3, column=1, padx=5, pady=20)
+        
+        time_relaxation_slider = tk.Scale(window_frame, from_=time_relax_lower_bound, to=time_relax_upper_bound, orient=tk.HORIZONTAL, length=int(0.5 * window_width), resolution=1)
+        time_relaxation_slider.grid(row=index+3, column=2, padx=5, pady=20)
+        
+        time_upper = tk.Label(window_frame, text=str(time_relax_upper_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        time_upper.grid(row=index+3, column=3, padx=5, pady=20)
         
         if self.time_relaxation:
             time_relaxation_slider.set(self.time_relaxation)
@@ -1493,21 +1582,21 @@ class PipeReplacementTool:
 
         # Add a label and an input for the user to select the cell index to optimize
         cell_index_label = tk.Label(window_frame, text="Select the cell index to optimize", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        cell_index_label.grid(row=index+4, column=0, padx=5, pady=20)
+        cell_index_label.grid(row=index+4, column=0, padx=5, pady=20, columnspan=2)
         cell_index_entry = tk.Entry(window_frame)
-        cell_index_entry.grid(row=index+4, column=1, padx=5, pady=20)
+        cell_index_entry.grid(row=index+4, column=1, padx=5, pady=20, columnspan=2)
         
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=optimize_cell)
-        run_button.grid(row=index+5, column=0, padx=5, pady=10, columnspan=2)
+        run_button.grid(row=index+5, column=0, padx=5, pady=10, columnspan=4)
         
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=2)
+        info_label.grid(row=index+6, column=0, padx=5, pady=10, columnspan=4)
         
         # Create a Text widget
         redirected_output = tk.Text(window_frame, wrap='word', height=8, fg=self.fg, font=(self.font, int(self.font_size // 2)))
-        redirected_output.grid(row=index+7, column=0, padx=5, pady=10, columnspan=2)
+        redirected_output.grid(row=index+7, column=0, padx=5, pady=10, columnspan=4)
         sys.stdout = RedirectOutput(redirected_output)
 
 
