@@ -1,0 +1,7 @@
+Command to create executable:
+
+pyinstaller main.spec
+
+The output will be put in the dist folder
+
+Copy all images used in my app from the repo into dist/main

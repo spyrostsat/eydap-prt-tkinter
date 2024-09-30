@@ -151,7 +151,9 @@ class PipeReplacementTool:
         
         self.root.destroy()
         self.root.quit()
-        exit()
+        
+        try: sys.exit()
+        except: pass
 
 
     def return_to_landing_page(self):
