@@ -907,7 +907,7 @@ class PipeReplacementTool:
             tk.Label(self.right_frame, text=f"Normalised bridges metric: {self.bridges_metric:.2f}", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_CONTENT_DIV))).pack(padx=padx_content, pady=pady, anchor='w')
         
         else:
-            tk.Label(self.right_frame, text=f"-", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_CONTENT_DIV), 'bold')).pack(padx=5, pady=pady)
+            tk.Label(self.right_frame, text=f"-", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_CONTENT_DIV), 'bold')).pack(padx=5)
         
         if self.cell_lower_bound: 
             tk.Label(self.right_frame, text="Combined metrics/damages", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_TITLE_DIV), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
@@ -1301,7 +1301,7 @@ class PipeReplacementTool:
             os.makedirs(os.path.join(self.project_folder, "Fishnet_Grids"), exist_ok=True)
             
             self.step2_output_path = os.path.join(self.project_folder, "Fishnet_Grids", "")
-            results, best_square_size = spatial_autocorrelation_analysis(pipe_shapefile_path=self.topological_analysis_result_shapefile, failures_shapefile_path=self.damage_shapefile, lower_bound_cell=self.cell_lower_bound, upper_bound_cell=self.cell_upper_bound, weight_avg_combined_metric=self.combined_metric_weight, weight_failures=self.failures_weight, output_path=self.step2_output_path)
+            results, best_square_size = spatial_autocorrelation_analysis(self.topological_analysis_result_shapefile, self.damage_shapefile, self.cell_lower_bound, self.cell_upper_bound, self.combined_metric_weight, self.failures_weight, self.step2_output_path, self.edges)
             self.best_square_size = best_square_size
             self.step2_finished = True
         
@@ -1402,7 +1402,7 @@ class PipeReplacementTool:
             
             self.select_square_size = selected_cell_size_slider.get()
             
-            self.sorted_fishnet_df, self.results_pipe_clusters, self.fishnet_index = local_spatial_autocorrelation(self.topological_analysis_result_shapefile, self.damage_shapefile, self.combined_metric_weight, self.failures_weight, self.select_square_size, self.step2_output_path)
+            self.sorted_fishnet_df, self.results_pipe_clusters, self.fishnet_index = local_spatial_autocorrelation(self.topological_analysis_result_shapefile, self.edges, self.damage_shapefile, self.combined_metric_weight, self.failures_weight, self.select_square_size, self.step2_output_path)
             
             self.path_fishnet = os.path.join(self.project_folder, "Fishnet_Grids", f"{self.select_square_size}_fishnets_sorted.shp")
             self.step2b_finished = True

@@ -9,24 +9,20 @@ from esda.moran import Moran, Moran_Local
 from splot.esda import lisa_cluster
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 from copy import deepcopy
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
-from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.operators.sampling.rnd import IntegerRandomSampling
-from typing import List, Union, TypedDict, Tuple
+from typing import Tuple
 from pymoo.operators.repair.rounding import RoundingRepair
 from pymoo.optimize import minimize
-import pickle
-import types
-import os
 import momepy
 import contextily as ctx
 import matplotlib.colors as mcolors
 import warnings
+import os
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -294,7 +290,8 @@ def spatial_autocorrelation_analysis(pipe_shapefile_path,
                                      upper_bound_cell, 
                                      weight_avg_combined_metric, 
                                      weight_failures, 
-                                     output_path):
+                                     output_path, 
+                                     edges):
   results = []
 
   pipe_gdf, failures_gdf = read_shapefiles(pipe_shapefile_path, failures_shapefile_path)
@@ -333,7 +330,7 @@ def spatial_autocorrelation_analysis(pipe_shapefile_path,
 
       # Create static choropleth maps (Equal intervals, Quantiles, Natural Breaks)
       # Ensure that the create_choropleth_maps method can handle the new column
-      create_choropleth_maps(fishnet_failures, square_size, output_path)
+      create_choropleth_maps(fishnet_failures, square_size, output_path, edges)
 
       # Calculate global Moran's I and store results
       y = fishnet_failures['weighted_avg']
@@ -349,7 +346,7 @@ def spatial_autocorrelation_analysis(pipe_shapefile_path,
   return results, best_square_size
 
 
-def create_choropleth_maps(fishnet_failures, square_size, output_path):
+def create_choropleth_maps(fishnet_failures, square_size, output_path, edges):
   # fig, ax = plt.subplots(figsize=(12, 10))
   # fishnet_failures.plot(column='weighted_avg', scheme='equal_interval', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
   #                   legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
@@ -361,9 +358,20 @@ def create_choropleth_maps(fishnet_failures, square_size, output_path):
 
   # Create a static choropleth map of the failure number per grid cell of the fishnet (Quantiles)
   fig, ax = plt.subplots(figsize=(12, 10))
-  fishnet_failures.plot(column='weighted_avg', scheme='quantiles', k=10, cmap='RdYlGn_r', legend=True, ax=ax,
+  
+  edges.plot(
+      ax=ax, linewidth=1, color='0.2')
+  
+  prov = ctx.providers.CartoDB.Positron
+  
+   
+  
+  fishnet_failures.plot(column='weighted_avg', scheme='quantiles', k=10, cmap='RdYlGn_r', legend=True, ax=ax, alpha = 0.7,
                     legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.2f}", 'interval':True})
-  fishnet_failures.boundary.plot(ax=ax)
+  fishnet_failures.boundary.plot(ax=ax, color = 'black', alpha=0.7)
+  
+  ctx.add_basemap(ax, crs=edges.crs.to_string(), source=prov)
+  
   plt.title(f'Average criticality metric per fishnet cell (size = {square_size} m x {square_size} m), Quantiles', fontsize = 18)
   plt.axis('off')
   plt.tight_layout()
@@ -554,7 +562,7 @@ def optimal_fishnet(pipe_shapefile_path, failures_shapefile_path, weight_avg_com
     return fishnet_failures, pipe_gdf
 
 
-def local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path):
+def local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path):
 
     fishnet_failures, pipe_gdf = optimal_fishnet(pipe_shapefile_path=pipe_shapefile_path, failures_shapefile_path=failures_shapefile_path, weight_avg_combined_metric=weight_avg_combined_metric, weight_failures=weight_failures, select_square_size=select_square_size, output_path=output_path)
     # June changes for LISA MAP
@@ -589,12 +597,21 @@ def local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, 
     # High-High and Low-Low represent positive spatial autocorrelation, while High-Low and Low-High represent negative spatial correlation.
 
     # Create a LISA cluster map
+    
+    # Define the tiles server
+    prov = ctx.providers.CartoDB.Positron
+    
     moran_local = Moran_Local(y, w)
 
     fig, ax = plt.subplots(figsize=(12,10))
+    
+    edges.plot(
+        ax=ax, linewidth=1, color='0.2')
+    
     lisa_cluster(moran_local, fishnet_failures, p=1,  ax=ax, legend=True,
-                  legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"})
-    fishnet_failures.boundary.plot(ax=ax)
+                  legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"}, alpha = 0.55)
+    
+    fishnet_failures.boundary.plot(ax=ax, color='black', alpha=0.5)
     
     # Annotate each grid cell with its ID
     for idx, row in fishnet_failures_sorted.iterrows():
@@ -603,7 +620,12 @@ def local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, 
         # Get the centroid of the grid cell
         centroid = row.geometry.centroid
         # Annotate the ID at the centroid  
-        ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=10, color='black')
+        ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold",
+                    bbox=dict(boxstyle='round,pad=0.5', fc='gray', alpha=0.4))
+    
+    ctx.add_basemap(ax, crs=edges.crs.to_string(), source=prov)
+      
+    
     
     plt.title('LISA Cluster Map for average criticality metric per fishnet cell', fontsize = 18)
     plt.tight_layout()
@@ -1101,10 +1123,15 @@ def export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under,
     
     results_df.index.name = 'group'
     results_df.index = range(1, len(results_df) + 1)
+    
     results_df.index.name = 'group'
     results_df = results_df.rename(columns={"Meets Minimum Length": f"Over {distance} m"})
-    df_string = results_df.to_string(justify='justify-all')
-
+    results_df['Group'] = results_df.index
+    first_column = results_df.pop('Group')
+    results_df.insert(0,'Group', first_column)
+    df_string = results_df.to_string(justify='justify-all', index=False)
+    
+    
     # Specific sentence to add
     # sentence_1 = f'Έχετε επιλέξει {red_edges_df.shape[0]} αγωγούς από το shapefile του κελιού.'
     sentence_1 = f"You have selected {red_edges_df.shape[0]} pipes from the shapefile of the cell."
@@ -1116,7 +1143,7 @@ def export_df_and_sentence_to_file(red_edges_df, results_df, total_length_under,
     sentence_3 = f'Out of the {total_length_all} m of the selected pipes, a total of {total_length_all-total_length_under} m of pipes are in continuous segments over {distance} m.'
     
     # sentence_4 = f'Αυτό αντιστοιχεί στο {perc*100} % των επιλεγμένων αγωγών.'
-    sentence_4 = f'This corresponds to {perc*100} % of the selected pipes.'
+    sentence_4 = f'This corresponds to {round(perc*100,1)} % of the selected pipes.'
     
     # Concatenate DataFrame string with the specific sentence
     output_string = sentence_1 +'\n\n'+ sentence_2 +'\n\n'+ df_string + '\n\n' + sentence_3 + '\n\n' + sentence_4
@@ -1144,7 +1171,7 @@ def main():
 
     # Process shapefile and save df_metrics
     gdf, G, nodes, edges, df_metrics = process_shapefile(shp_path, weight_closeness, weight_betweenness, weight_bridge, output_path)
-                  
+	
     # Example usage:
     # Specify the metrics to plot
     plot_metric = ['closeness', 'betweenness', 'bridge','composite']  # Choose a list adding any of 'closeness', 'betweenness', 'bridge', or 'composite'
@@ -1177,19 +1204,19 @@ def main():
     output_path_fishnet = 'Fishnet_Grids'    #_{timestamp}'
     os.makedirs(output_path_fishnet, exist_ok=True)
 
-    results, best_square_size = spatial_autocorrelation_analysis(pipe_shapefile_path, failures_shapefile_path, lower_bound_cell, upper_bound_cell, weight_avg_combined_metric, weight_failures, output_path_fishnet)
+    results, best_square_size = spatial_autocorrelation_analysis(pipe_shapefile_path, failures_shapefile_path, lower_bound_cell, upper_bound_cell, weight_avg_combined_metric, weight_failures, output_path_fishnet, edges)
 
     ####### STEP 2B
     select_square_size = best_square_size ## εδώ ο χρήστης επιλέγει αν θέλει να κρατήσει το best_square_size ή να βάλει ένα δικό του.
 
-    sorted_fishnet_df, results_pipe_clusters, fishnet_index = local_spatial_autocorrelation(pipe_shapefile_path, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path_fishnet) ##same output path with Lisa analysis (1)
+    sorted_fishnet_df, results_pipe_clusters, fishnet_index = local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path_fishnet) ##same output path with Lisa analysis (1)
 
     ###### STEP 3A - BEFORE OPTIMIZE
     # Define which pipes are contained in each cell of the grid (Part 3.1)
     results_pipe_clusters = optimize_pipe_clusters(results_pipe_clusters, df_metrics, sorted_fishnet_df)
 
     # Read the pipe shapefile which was created in part 1 and exported in the main folder 
-    path_pipes = r"C:\Users\Nikos\Dropbox\EYDAP_Asset Management\Calcs\WP2\study_results\Pipes_WG_export_with_metrics.shp"
+    path_pipes = r"C:\Users\Nikos\Dropbox\EYDAP_Asset Management\Calcs\WP2\study_results_v1\Pipes_WG_export_with_metrics.shp"
 
     # Read the sorted fishnet shapefile
     path_fishnet = output_path_fishnet +'/' +str(select_square_size) + '_fishnets_sorted.shp'
