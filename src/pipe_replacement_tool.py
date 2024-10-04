@@ -1533,7 +1533,7 @@ class PipeReplacementTool:
             # define 3 hyperparameters for optimization
             pop_size = int(round((7.17 * number_of_pipes - 1.67), -1))  # linear equation going through (10,70) and (70,500)
             n_gen = int(round((1.33 * number_of_pipes + 6.67), -1))  # linear equation going through (70,100) and (10,20)
-            n_gen = 2  # TODO: Remove this when deploying
+            # n_gen = 2  # TODO: Remove this when deploying
 
             n_offsprings = int(max(round((pop_size / 5), -1), 5))
             
