@@ -1,13 +1,12 @@
-Should first create the appropriate main.spec file
+First create the appropriate main.spec file
 
 Command to transform the Python app into a Windows executable (.exe): pyinstaller main.spec
 
-The output will be put in the dist folder (it will ask me to remove all the previous content inside the dist folder)
+The output will be put in the dist folder (it will ask me to remove all the previous content inside the folder)
 
 Copy all images used in my app from the repo into dist/main (e.g. logo.png)
 
-Finally, use inno setup compiler to create an installation wizard that will be used to install the created executable to other Windows devices
+Finally, use inno setup compiler to create an installation wizard
 
 If I use the inno setup compiler once and create the installation wizard, the script that will be run to create the wizard (called prt-setup-script.iss)
-will be created. I can save it and then use the same script to create a new installation wizard if I create new versions of my app via the inno setup
-compiler
+will be created. I can save it and then use the same script to create a new installation wizard if I create new versions of my app
