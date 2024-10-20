@@ -1,11 +1,23 @@
 from typing import List, Dict
 import tkinter as tk
+import requests
 import glob
 import string
 import os
 import json
 import shutil
 import time
+
+
+def check_internet_connection(url="http://www.google.com/", timeout=5) -> bool:
+    try:
+        resp = requests.get(url, timeout=timeout)
+        if resp.status_code in [200, 301]:
+            return True
+        else:
+            return False
+    except (requests.ConnectionError, requests.Timeout):
+        return False
 
 
 def is_valid_project_name(project_name: str) -> bool:
@@ -42,7 +54,7 @@ def shapefile_bare_name(src_path: str) -> str:
     return os.popen(f"ls {src_path}").readlines()[0].split("\n")[0].split(".")[0]
 
 
-def updates_scenarios_config_file(scenario_folder: str, name: str, description: str) -> None:
+def update_scenarios_config_file(scenario_folder: str, name: str, description: str) -> None:
     '''
     The function opens a json file called .prt.conf or creates one if it doesn't exist and saves the project folder path and updates timestamp
     This file should already contain the info of other previous projects if they exist so we need to read the file first    
@@ -79,6 +91,23 @@ def updates_scenarios_config_file(scenario_folder: str, name: str, description: 
 
     with open(config_file, "w") as f:
         json.dump(data, f)
+
+
+def refresh_scenarios_config_file() -> None:
+    data = read_scenarios_config_file()
+    
+    if not data: return
+    
+    updated_data: List[Dict] = []
+    
+    for project in data:
+        if os.path.exists(os.path.join(project["project_folder"], "metadata.json")):
+            updated_data.append(project)
+
+    config_file = os.path.join(os.path.expanduser("~"), ".prt.conf")
+    
+    with open(config_file, "w") as f:
+        json.dump(updated_data, f)
 
 
 def read_scenarios_config_file() -> List[Dict]:

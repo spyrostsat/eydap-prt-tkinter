@@ -252,7 +252,7 @@ class PipeReplacementTool:
             with open(os.path.join(scenario_folder, "metadata.json"), "w") as f:
                 json.dump(scenario_info, f)
             
-            updates_scenarios_config_file(scenario_folder, name, description)  # Update the scenarios config file
+            update_scenarios_config_file(scenario_folder, name, description)  # Update the scenarios config file
 
             window.destroy()
             messagebox.showinfo("Success", "Scenario created successfully")
@@ -430,7 +430,7 @@ class PipeReplacementTool:
             self.sorted_fishnet_df.to_csv(os.path.join(self.project_folder, scenario_info['sorted_fishnet_df']), index=True)                
             self.fishnet_index.to_csv(os.path.join(self.project_folder, scenario_info['fishnet_index']), index=True)
         
-        updates_scenarios_config_file(self.project_folder, self.project_name, self.project_description)
+        update_scenarios_config_file(self.project_folder, self.project_name, self.project_description)
         
         if show_message:
             messagebox.showinfo("Success", "Scenario saved successfully")
@@ -747,8 +747,9 @@ class PipeReplacementTool:
         
         tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10, pady=10)
         
-        # Display a datatable with the recent scenarios
-        scenarios: List[Dict] = read_scenarios_config_file()
+        refresh_scenarios_config_file()  # Make sure the .prt.conf file is up to date
+        
+        scenarios: List[Dict] = read_scenarios_config_file()  # Display a datatable with the recent scenarios
 
         self.recent_scenarios = ttk.Treeview(self.recent_scenarios_frame, columns=['project_folder', 'name', 'timestamp'], show="headings")
         self.recent_scenarios.bind("<Double-1>", lambda event: self.tv_on_double_click(event))
@@ -828,7 +829,7 @@ class PipeReplacementTool:
         
         # Left menu section
         self.menu_tree = ttk.Treeview(left_frame, show="tree")
-        self.menu_tree.bind("<Double-1>", lambda event: self.handle_menu_click(event))
+        self.menu_tree.bind("<<TreeviewSelect>>", lambda event: self.handle_menu_click(event))
         
         self.menu_tree.column("#0", width=int(self.width * left_frame_width_mult))
         self.menu_tree.heading("#0", text="Setup")
@@ -843,6 +844,8 @@ class PipeReplacementTool:
         
         # Footer section
         tk.Label(bottom_frame, text=f"Pipe Replacement Tool (v.2.0)      © {datetime.datetime.now().year} Urban Water Management & Hydroinformatics Group", fg="#444444", bg=self.bg, font=(self.font, int(self.font_size // 1.8))).pack(pady=10)
+
+        self.root.after(1000, self.check_internet_or_popup)
 
 
     def update_left_frame(self):
@@ -1098,6 +1101,11 @@ class PipeReplacementTool:
             img_label = tk.Label(self.middle_frame, image=photo_image)
             img_label.image = photo_image
             img_label.pack(expand=True, fill='both')
+
+
+    def check_internet_or_popup(self) -> None:
+        if not check_internet_connection():
+            messagebox.showwarning("Warning", "Map tiles might not load properly due to lack of internet connection")
 
 
     def criticality_maps_per_cell_size(self):
