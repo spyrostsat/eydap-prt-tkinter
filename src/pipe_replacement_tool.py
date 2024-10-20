@@ -26,8 +26,8 @@ class PipeReplacementTool:
     
     def __init__(self):
         self.ui_elements()
-        self.root_window_stuff()
         self.reset_all()
+        self.root_window_stuff()
         self.create_menu()
         self.splash_screen()
         self.root.mainloop()
@@ -56,48 +56,6 @@ class PipeReplacementTool:
         self.tk_grey = "#d9d9d9"
         self.white = "#ffffff"
 
-
-    def root_window_stuff(self):
-        self.root = tk.Tk()
-        self.root.withdraw()  # Don't show the root window yet
-        
-        self.root.title("Pipe Replacement Tool")
-        self.root.resizable(True, True)
-        
-        # Maximize the window
-        if "Windows" in platform.system():
-            self.root.state('zoomed')
-        else:
-            self.root.attributes('-zoomed', True)
-        
-        self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)  # Behavior when the 'X' button is clicked
-        
-        self.screen_width = 1920
-        self.screen_height = 1080
-                
-        self.width = self.screen_width
-        self.height = self.screen_height
-        
-        self.root.geometry(f"{self.width}x{self.height}")
-        self.root.iconphoto(True, tk.PhotoImage(file="logo.png", height=170))
-
-        self.logo_image = tk.PhotoImage(file='logo.png')
-
-
-    def create_menu(self):
-        self.root.config(menu=None)
-        
-        self.menuBar = tk.Menu(self.root)
-        self.root.config(menu=self.menuBar)
-        
-        self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
-        self.fileMenu.add_command(label="Open", command=self.open_scenario)
-        
-        self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
-        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
-        self.helpMenu.add_command(label="About", command=self.show_about_info)
-        
 
     def reset_all(self):
         self.menuBar = None
@@ -143,6 +101,42 @@ class PipeReplacementTool:
         self.const_pipe_materials = {"Asbestos Cement": 50, "Steel": 40, "PVC": 30, "HDPE": 12, "Cast iron": 40}
         self.recent_scenarios = None
         self.network_shapefile_attributes = None
+
+
+    def root_window_stuff(self):
+        self.root = tk.Tk()
+        self.root.withdraw()  # Don't show the root window yet
+        
+        self.root.title("Pipe Replacement Tool")
+        self.root.resizable(True, True)
+        
+        self.root.protocol("WM_DELETE_WINDOW", self.on_app_closing)  # Behavior when the 'X' button is clicked
+        
+        self.screen_width = 1920
+        self.screen_height = 1080
+                
+        self.width = self.screen_width
+        self.height = self.screen_height
+        
+        self.root.geometry(f"{self.width}x{self.height}")
+        self.root.iconphoto(True, tk.PhotoImage(file="logo.png", height=170))
+
+        self.logo_image = tk.PhotoImage(file='logo.png')
+
+
+    def create_menu(self):
+        self.root.config(menu=None)
+        
+        self.menuBar = tk.Menu(self.root)
+        self.root.config(menu=self.menuBar)
+        
+        self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
+        self.fileMenu.add_command(label="Open", command=self.open_scenario)
+        
+        self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
+        self.helpMenu.add_command(label="About", command=self.show_about_info)
 
 
     def close_app(self):
@@ -654,12 +648,19 @@ class PipeReplacementTool:
         window.title("About")
         window.resizable(False, False)
 
+        # Center the window
+        window_width = self.screen_width // 3
+        window_height = self.screen_height // 6
+        x = (self.screen_width / 2) - (window_width / 2)
+        y = (self.screen_height / 2) - (window_height / 2)
+        window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
+
         window_frame = tk.Frame(window, bg=self.bg)
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
         
         padx = 20
-        pady = 7
+        pady = 10
         
         tk.Label(window_frame, text="Pipe Replacement Tool Version 2.0", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(padx=padx, pady=pady)
         tk.Label(window_frame, text="Developed by UWMH", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).pack(padx=padx, pady=pady)
@@ -669,11 +670,10 @@ class PipeReplacementTool:
         window.transient(self.root)
         window.grab_set()
         window.wait_window()
-        
+
 
     def splash_screen(self):
         self.splash = tk.Toplevel()
-        self.splash.title("Pipe Replacement Tool")
         self.screen_width = self.splash.winfo_screenwidth()
         self.screen_height = self.splash.winfo_screenheight()
 
@@ -696,14 +696,24 @@ class PipeReplacementTool:
         
         label = tk.Label(self.splash, text="Loading...", font=("Sans", 18), fg="white", bg=self.blue_bg)
         label.pack(expand=True)
+
+        # Make sure the root window is not visible and the splash screen is visible
+        self.root.withdraw()
+        self.root.update()
         
         self.splash.update()
-        self.root.update()
+        self.splash.deiconify()
 
         self.landing_page(from_splash=True)
         
     
     def destroy_splash_screen(self):
+        # Maximize the root window
+        if "Windows" in platform.system():
+            self.root.state('zoomed')
+        else:
+            self.root.attributes('-zoomed', True)
+        
         self.splash.destroy()
         self.root.deiconify()
 
