@@ -436,6 +436,44 @@ class PipeReplacementTool:
             messagebox.showinfo("Success", "Scenario saved successfully")
 
 
+    def delete_scenario(self):
+        scenario_folder = filedialog.askdirectory(initialdir=os.path.expanduser("~"))
+
+        if not scenario_folder:
+            return
+        
+        if not os.path.exists(os.path.join(scenario_folder, "metadata.json")):
+            messagebox.showerror("Error", "Invalid scenario folder")
+            return
+        
+        # There must also be a folder with the name 'damage' and 'network' inside the scenario folder
+        if not os.path.exists(os.path.join(scenario_folder, "network")) or not os.path.exists(os.path.join(scenario_folder, "damage")):
+            messagebox.showerror("Error", "Invalid scenario folder")
+            return
+        
+        # Read the metadata file to get the project name
+        with open(os.path.join(scenario_folder, "metadata.json"), "r") as f:
+            metadata = json.load(f)
+        
+        scenario_name = metadata["project_name"]
+        
+        # The scenario_name must be the same as the folder name
+        if not os.path.basename(scenario_folder) == scenario_name:
+            messagebox.showerror("Error", "Invalid scenario folder")
+            return
+        
+        all_scenarios = read_scenarios_config_file()
+        
+        # The scenario must be in the scenarios config file
+        if not any([scenario["name"] == scenario_name for scenario in all_scenarios]):
+            messagebox.showerror("Error", "Invalid scenario folder")
+            return
+        
+        if messagebox.askokcancel("Delete Scenario", f"Are you sure you want to delete the scenario '{scenario_name}' in '{scenario_folder}'?"):
+            shutil.rmtree(scenario_folder)
+            messagebox.showinfo("Success", "Scenario deleted successfully")
+
+
     def handle_menu_click(self, event):
         try:
             item = self.menu_tree.selection()[0]
@@ -738,14 +776,15 @@ class PipeReplacementTool:
         self.scenarios_frame.grid_propagate(False)
         
         tk.Label(self.scenarios_frame, text="Create a new scenario or manage existing", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, columnspan=3, padx=10, pady=10)
-        tk.Button(self.scenarios_frame, text="Create New Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=10, pady=10)
-        tk.Button(self.scenarios_frame, text="Open Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=10, pady=10)
+        tk.Button(self.scenarios_frame, text="Create New Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=5, pady=10)
+        tk.Button(self.scenarios_frame, text="Open Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=5, pady=10)
+        tk.Button(self.scenarios_frame, text="Delete Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.delete_scenario).grid(row=1, column=2, padx=5, pady=10)
         
         self.recent_scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=300)
-        self.recent_scenarios_frame.pack()
+        self.recent_scenarios_frame.pack(padx=10, pady=10)
         self.recent_scenarios_frame.grid_propagate(False)
         
-        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, padx=10, pady=10)
+        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, pady=15, sticky='w')
         
         refresh_scenarios_config_file()  # Make sure the .prt.conf file is up to date
         
@@ -911,7 +950,7 @@ class PipeReplacementTool:
         padx_content = 40
         pady = 10
         
-        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(pady=35)
+        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=35, anchor='w')
         
         if self.closeness_metric or self.betweeness_metric or self.bridges_metric:
             tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_TITLE_DIV), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
