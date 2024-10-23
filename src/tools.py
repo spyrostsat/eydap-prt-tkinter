@@ -565,15 +565,11 @@ def optimal_fishnet(pipe_shapefile_path, failures_shapefile_path, weight_avg_com
 def local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile_path, weight_avg_combined_metric, weight_failures, select_square_size, output_path):
 
     fishnet_failures, pipe_gdf = optimal_fishnet(pipe_shapefile_path=pipe_shapefile_path, failures_shapefile_path=failures_shapefile_path, weight_avg_combined_metric=weight_avg_combined_metric, weight_failures=weight_failures, select_square_size=select_square_size, output_path=output_path)
-    # June changes for LISA MAP
-    fishnet_failures_sorted = fishnet_failures.sort_values(by='weighted_avg', ascending=False).reset_index(drop=True)
-    fishnet_failures_sorted['ID'] = range(1, len(fishnet_failures_sorted) + 1)
-    fishnet_failures_sorted = fishnet_failures.merge(fishnet_failures_sorted[['weighted_avg', 'ID']], on='weighted_avg')
-    
     # Perform the local spatial autocorrelation analysis
     y = fishnet_failures['weighted_avg']
     w = lps.weights.Queen.from_dataframe(fishnet_failures)
     w.transform = 'r'
+    moran_local = Moran_Local(y, w)
     # Local spatial autocorrelation with Local Indicators of Spatial Association (LISA) statistics
     # While the global spatial autocorrelation can prove the existence of clusters,
     # or a positive spatial autocorrelation between the listing price and their neighborhoods,
@@ -596,45 +592,11 @@ def local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile
 
     # High-High and Low-Low represent positive spatial autocorrelation, while High-Low and Low-High represent negative spatial correlation.
 
-    # Create a LISA cluster map
-    
-    # Define the tiles server
-    prov = ctx.providers.CartoDB.Positron
-    
-    moran_local = Moran_Local(y, w)
-
-    fig, ax = plt.subplots(figsize=(12,10))
-    
-    edges.plot(
-        ax=ax, linewidth=1, color='0.2')
-    
-    lisa_cluster(moran_local, fishnet_failures, p=1,  ax=ax, legend=True,
-                  legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"}, alpha = 0.55)
-    
-    fishnet_failures.boundary.plot(ax=ax, color='black', alpha=0.5)
-    
-    # Annotate each grid cell with its ID
-    for idx, row in fishnet_failures_sorted.iterrows():
-        # Get the ID value
-        id_value = row['ID']
-        # Get the centroid of the grid cell
-        centroid = row.geometry.centroid
-        # Annotate the ID at the centroid  
-        ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold",
-                    bbox=dict(boxstyle='round,pad=0.5', fc='gray', alpha=0.4))
-    
-    ctx.add_basemap(ax, crs=edges.crs.to_string(), source=prov)
-      
-    
-    
-    plt.title('LISA Cluster Map for average criticality metric per fishnet cell', fontsize = 18)
-    plt.tight_layout()
-    plt.savefig(output_path + '/' + str(select_square_size) + '_' +'final_lisa_cluster_map.png')
 
     # Create a data frame containing the number of failures and the local moran statistics
     fishnet_failures['fishnet_index'] = fishnet_failures.index
-    fishnet_grid_stats_fails = pd.DataFrame(fishnet_failures)
-    fishnet_grid_stats_fails["Local Moran's I (LISA)"] = moran_local._statistic
+    
+    fishnet_failures["Local Moran's I (LISA)"] = moran_local._statistic
 
     # Define a function to get the LISA cluster label
     def get_lisa_cluster_label(val):
@@ -653,14 +615,12 @@ def local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile
     cluster_labels = [get_lisa_cluster_label(val) for val in moran_local.q]
 
     # Add a new column with cluster labels for significant clusters (or "NS" for non-significant clusters)
-    fishnet_grid_stats_fails['Cluster_Label'] = cluster_labels
+    fishnet_failures['Cluster_Label'] = cluster_labels
 
     # Sort the cells according to the cluster label and weighted metric
-    sorted_fishnet_df = fishnet_grid_stats_fails.sort_values(by=['Cluster_Label', 'weighted_avg'], ascending=[True, False])
+    sorted_fishnet_df = fishnet_failures.sort_values(by=['Cluster_Label', 'weighted_avg'], ascending=[True, False])
 
     # Spatially join the fishnet grid cells and pipes
-    # First, add an explicit 'fishnet_index' column to the fishnet_failures GeoDataFrame
-    fishnet_failures['fishnet_index'] = fishnet_failures.index
     
     # Now perform the spatial join using this new 'fishnet_index' column
     spatial_join = gpd.sjoin(fishnet_failures, pipe_gdf, predicate='intersects')
@@ -683,18 +643,68 @@ def local_spatial_autocorrelation(pipe_shapefile_path, edges, failures_shapefile
     sorted_fishnet_df['weighted_avg'] = sorted_fishnet_df['weighted_avg'].round(3)
     sorted_fishnet_df['failures_standardized'] = sorted_fishnet_df['failures_standardized'].round(3)
     sorted_fishnet_df["Local Moran's I (LISA)"] = sorted_fishnet_df["Local Moran's I (LISA)"].round(3)
-    sorted_fishnet_df = sorted_fishnet_df.drop(['weighted_fail','fishnet_index'],axis=1)
-    sorted_fishnet_df = sorted_fishnet_df.rename(columns={'avg_combined_metric':'top_metric','failures_standardized':'stand_fail','weighted_avg':'metric_com','Cluster_Label':'Label',"Local Moran's I (LISA)":'localmoran'})
-    sorted_fishnet_df = sorted_fishnet_df.reset_index()
-    sorted_fishnet_df.rename(columns={'index': 'cell_index'}, inplace=True)
-    sorted_fishnet_df = sorted_fishnet_df.reset_index()
-    sorted_fishnet_df.rename(columns={'index': 'Priority'}, inplace=True)
-    sorted_fishnet_df['Priority']+=1
+    sorted_fishnet_df = sorted_fishnet_df.drop(['weighted_fail'],axis=1)
+    sorted_fishnet_df = sorted_fishnet_df.rename(columns={'avg_combined_metric':'top_metric','failures_standardized':'stand_fail','weighted_avg':'metric_com','Cluster_Label':'Label',"Local Moran's I (LISA)":'localmoran', 'fishnet_index':'cell_index'})
+    
+    sorted_fishnet_df['Priority'] = range(1,len(sorted_fishnet_df)+1)
+    
     sorted_fishnet_df.set_index('cell_index', inplace=True)
 
     # Now, the 'results_pipe_clusters' dictionary contains the pipe labels for each fishnet cell with the fishnet index as the key
     sorted_fishnet_gdf = gpd.GeoDataFrame(sorted_fishnet_df).set_crs('EPSG:2100')
     sorted_fishnet_gdf.to_file(output_path +'/' +str(select_square_size) + '_fishnets_sorted.shp')
+
+    
+    fishnet_failures['Priority'] = sorted_fishnet_df['Priority']
+    #### Create a LISA cluster map
+    # Define the tiles server
+    prov = ctx.providers.CartoDB.Positron
+
+    fig, ax = plt.subplots(figsize=(12,10))
+    
+    edges.plot(ax=ax, linewidth=1, color='0.2')
+    
+    lisa_cluster(moran_local, fishnet_failures, p=1,  ax=ax, legend=True, legend_kwds={'loc':'center left', 'bbox_to_anchor':(1,0.5), 'fmt':"{:.0f}"}, alpha = 0.55)
+    
+    fishnet_failures.boundary.plot(ax=ax, color='black', alpha=0.5)
+    
+    # Annotate each grid cell with its ID
+    if select_square_size == 100:
+        for idx, row in fishnet_failures.iterrows():
+            # Get the ID value
+            id_value = row['Priority']
+            # Get the centroid of the grid cell
+            centroid = row.geometry.centroid
+            # Annotate the ID at the centroid  
+            ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=8, color='black', weight="bold")
+                        
+    elif select_square_size == 200:
+        for idx, row in fishnet_failures.iterrows():
+            # Get the ID value
+            id_value = row['Priority']
+            # Get the centroid of the grid cell
+            centroid = row.geometry.centroid
+            # Annotate the ID at the centroid  
+            # ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold",
+            #             bbox=dict(boxstyle='round,pad=0.5', fc='gray', alpha=0.4))
+            ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold")
+        
+    else:
+        for idx, row in fishnet_failures.iterrows():
+            # Get the ID value
+            id_value = row['Priority']
+            # Get the centroid of the grid cell
+            centroid = row.geometry.centroid
+            # Annotate the ID at the centroid  
+            ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold",
+                        bbox=dict(boxstyle='round,pad=0.5', fc='gray', alpha=0.4))
+            # ax.annotate(text=str(id_value), xy=(centroid.x, centroid.y), ha='center', va='center', fontsize=12, color='black', weight="bold")
+    
+    ctx.add_basemap(ax, crs=edges.crs.to_string(), source=prov)
+    
+    plt.title('LISA Cluster Map for average criticality metric per fishnet cell', fontsize = 18)
+    plt.tight_layout()
+    plt.savefig(output_path + '/' + str(select_square_size) + '_' +'final_lisa_cluster_map.png')
 
     return sorted_fishnet_df, results_pipe_clusters, fishnet_index
 
@@ -990,13 +1000,15 @@ def manipulate_opt_results(edges, X, F, pipe_table_trep, pipes_gdf_cell):
     f1_values = F[:,0]
     f2_values = F[:,1]
 
-    kn = KneeLocator(f1_values, f2_values, curve='convex', direction='decreasing')
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        kn = KneeLocator(f1_values, f2_values, curve='convex', direction='decreasing')
 
     # Get the index of the knee point
     ind_opt = next((i for i, val in enumerate(f1_values) if val == kn.knee), None)
     
     if ind_opt is None:
-         X_opt = X[:,-1]
+         X_opt = X[-1,:]
     else:
      # Get the optimal X values
          X_opt = X[ind_opt,:]

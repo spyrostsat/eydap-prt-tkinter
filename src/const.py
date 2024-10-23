@@ -26,6 +26,11 @@ MATERIAL_COLORS = {
 	'Cast iron': "#00FFFF",
 }
 
+CLOSENESS_TOOLTIP = 'Closeness centrality metric expresses the average length from a pipe to all nodes in the network. This metric practically indicates how "centrally located" the pipeline is in the network, based on distance. Closeness Centrality metric prioritises the replacement of pipelines that are important in terms of their location, such as centrally located pipelines in the network.'
+BETWEENESS_TOOLTIP = 'Betweenness centrality metric expresses "how often" shortest paths connecting any two nodes in the network pass through a node. This metric practically indicates that the removal of a pipeline is very likely to lead to a longer duration of water distribution time in the network. It expresses "how important a pipeline is in the network at the sharing level". Betweenness Centrality metric prioritises the replacement of pipelines that are important in terms of water distribution, such as primary pipelines.'
+BRIDGES_TOOLTIP = 'Bridges metric expresses whether the pipeline is a "bridge" of the network or not. It practically indicates that if the pipeline is removed, then parts of the network are completely cut off. Bridge metric identifies the pipelines that can lead to the interruption of water supply to consumer segments.'
+COMPOSITE_TOOLTIP = 'The above selected weights of the individual topological metrics are normalized and aggregated into a "Composite Metric". The Composite metric practically takes into account all the above "policies" of prioritising pipe replacement. Equally weights across the 3 metrics are suggested.'
+
 INIT_MENU_OPTIONS = [
 	{
 		"name": "Setting the topology",
@@ -52,13 +57,13 @@ INIT_MENU_OPTIONS = [
 		"active": True
 	},
     {
-		"name": "Betweeness metric",
+		"name": "Closeness metric",
 		"step": 1,
 		"leaf": True,
 		"active": False
 	},
     {
-		"name": "Closeness metric",
+		"name": "Betweeness metric",
 		"step": 1,
 		"leaf": True,
 		"active": False

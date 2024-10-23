@@ -2,6 +2,7 @@ from tkintermapview.canvas_path import CanvasPath
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import filedialog
+from tktooltip import ToolTip
 from copy import deepcopy
 from PIL import ImageTk, Image
 from src.map_utils import *
@@ -46,6 +47,7 @@ class PipeReplacementTool:
         
         self.bg = "#F0F0F0"
         self.fg = "#000000"
+        self.gray_fg = "#333333"
         self.blue_bg = "#1d2b59"
         self.light_blue_bg = "#4d648d"
         self.danger_bg = "#FF0000"
@@ -122,6 +124,7 @@ class PipeReplacementTool:
         self.root.iconphoto(True, tk.PhotoImage(file="logo.png", height=170))
 
         self.logo_image = tk.PhotoImage(file='logo.png')
+        self.info_image = tk.PhotoImage(file='info.png').subsample(9, 9)
 
 
     def create_menu(self):
@@ -1284,47 +1287,62 @@ class PipeReplacementTool:
         slider_percentage = 0.6
         
         closeness_label = tk.Label(window_frame, text="Closeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        closeness_label.grid(row=0, column=0, padx=5, pady=20)
+        closeness_label.grid(row=0, column=0, padx=5, pady=20, sticky='e')
+        
+        closeness_info = tk.Label(window_frame, text="", image=self.info_image, compound=tk.LEFT, bg=self.bg)
+        closeness_info.grid(row=0, column=1, padx=5, pady=20)
+        ToolTip(closeness_info, msg=CLOSENESS_TOOLTIP)
         
         closeness_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        closeness_lower_bound.grid(row=0, column=1, padx=5, pady=20)
+        closeness_lower_bound.grid(row=0, column=2, padx=5, pady=20)
         
         closeness_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
-        closeness_slider.grid(row=0, column=2, padx=5, pady=20)
+        closeness_slider.grid(row=0, column=3, padx=5, pady=20)
 
         closeness_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        closeness_upper_bound.grid(row=0, column=3, padx=5, pady=20)
+        closeness_upper_bound.grid(row=0, column=4, padx=5, pady=20)
         
         betweeness_label = tk.Label(window_frame, text="Betweeness metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        betweeness_label.grid(row=1, column=0, padx=5, pady=20)
+        betweeness_label.grid(row=1, column=0, padx=5, pady=20, sticky='e')
+        
+        betweeness_info = tk.Label(window_frame, text="", image=self.info_image, compound=tk.LEFT, bg=self.bg)
+        betweeness_info.grid(row=1, column=1, padx=5, pady=20)
+        ToolTip(betweeness_info, msg=BETWEENESS_TOOLTIP)
         
         betweeness_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        betweeness_lower_bound.grid(row=1, column=1, padx=5, pady=20)
+        betweeness_lower_bound.grid(row=1, column=2, padx=5, pady=20)
         
         betweeness_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
-        betweeness_slider.grid(row=1, column=2, padx=5, pady=20)
+        betweeness_slider.grid(row=1, column=3, padx=5, pady=20)
         
         betweeness_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        betweeness_upper_bound.grid(row=1, column=3, padx=5, pady=20)
+        betweeness_upper_bound.grid(row=1, column=4, padx=5, pady=20)
         
         bridges_label = tk.Label(window_frame, text="Bridges metric", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        bridges_label.grid(row=2, column=0, padx=5, pady=20)
+        bridges_label.grid(row=2, column=0, padx=5, pady=20, sticky='e')
+        
+        bridges_info = tk.Label(window_frame, text="", image=self.info_image, compound=tk.LEFT, bg=self.bg)
+        bridges_info.grid(row=2, column=1, padx=5, pady=20)
+        ToolTip(bridges_info, msg=BRIDGES_TOOLTIP)
         
         bridges_lower_bound = tk.Label(window_frame, text=str(lowest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        bridges_lower_bound.grid(row=2, column=1, padx=5, pady=20)
+        bridges_lower_bound.grid(row=2, column=2, padx=5, pady=20)
         
         bridges_slider = tk.Scale(window_frame, from_=lowest_value, to=highest_value, orient=tk.HORIZONTAL, length=int(slider_percentage * window_width), resolution=step)
-        bridges_slider.grid(row=2, column=2, padx=5, pady=20)
+        bridges_slider.grid(row=2, column=3, padx=5, pady=20)
         
         bridges_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        bridges_upper_bound.grid(row=2, column=3, padx=5, pady=20)
+        bridges_upper_bound.grid(row=2, column=4, padx=5, pady=20)
+        
+        composite_label = tk.Label(window_frame, text=COMPOSITE_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=(self.font, int(self.font_size // 1.5)), wraplength=int(0.7*window_width))
+        composite_label.grid(row=3, column=0, padx=5, pady=20, columnspan=5, sticky='w')
         
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=run_topological_analysis)
-        run_button.grid(row=3, column=0, padx=5, pady=20, columnspan=4)
+        run_button.grid(row=4, column=0, padx=5, pady=20, columnspan=5)
         
         # Info label
         info_label = tk.Label(window_frame, text="", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        info_label.grid(row=4, column=0, padx=5, pady=20, columnspan=4)
+        info_label.grid(row=5, column=0, padx=5, pady=20, columnspan=5)
         
         window.wait_window()
     

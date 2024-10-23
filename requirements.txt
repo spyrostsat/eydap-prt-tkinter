@@ -75,6 +75,7 @@ splot==1.1.5.post1
 spreg==1.4.2
 sympy==1.12
 threadpoolctl==3.3.0
+tkinter-tooltip==3.1.0
 tkintermapview==1.29
 tqdm==4.66.2
 tzdata==2024.1
