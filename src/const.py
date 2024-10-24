@@ -30,6 +30,13 @@ CLOSENESS_TOOLTIP = 'Closeness centrality metric expresses the average length fr
 BETWEENESS_TOOLTIP = 'Betweenness centrality metric expresses "how often" shortest paths connecting any two nodes in the network pass through a node. This metric practically indicates that the removal of a pipeline is very likely to lead to a longer duration of water distribution time in the network. It expresses "how important a pipeline is in the network at the sharing level". Betweenness Centrality metric prioritises the replacement of pipelines that are important in terms of water distribution, such as primary pipelines.'
 BRIDGES_TOOLTIP = 'Bridges metric expresses whether the pipeline is a "bridge" of the network or not. It practically indicates that if the pipeline is removed, then parts of the network are completely cut off. Bridge metric identifies the pipelines that can lead to the interruption of water supply to consumer segments.'
 COMPOSITE_TOOLTIP = 'The above selected weights of the individual topological metrics are normalized and aggregated into a "Composite Metric". The Composite metric practically takes into account all the above "policies" of prioritising pipe replacement. Equally weights across the 3 metrics are suggested.'
+COMBINED_METRIC_FAILURES_TOOLTIP = 'The final index is calculated by combining the composite metric with the failure index. The weights are normalized. For example, if only the failure index should be considered with no contribution from topological metrics, the slider should be set to 1. Conversely, if only the topological metric is to be considered, the slider should be set to 0. It is recommended to assign equal weights to both the composite metric and the failures index.'
+CELL_LOWER_BOUND_TOOLTIP = 'The minimum cell size of the rectangular grid that will be created for the definition of critical areas. The size of the grid cell is a parameter to be optimised.'
+CELL_UPPER_BOUND_TOOLTIP = 'The maximum cell size of the rectangular grid that will be created for the definition of critical areas. The size of the grid cell is a parameter to be optimised.'
+TIMESPAN_TOOLTIP = 'Time window around the time 𝑡∗ within which the replacement of each pipeline is allowed to take place'
+CELL_INDEX_TOOLTIP = 'The cell index (i.e., priority number) that corresponds to the previously created grid cells and is visible under the “criticality map for selected cell size”'
+DECISION_SUPPORT_TOOLTIP = 'Pipe replacement in selected cell based on replacement times (Proceed with time option) or based on individual pipes (Proceed with pipe IDs) for the analysis of individual contracts.'
+PIPE_GROUPING_TOOLTIP = 'Selected optimised cell to visualise results (shapefile) of pipe replacement clusters.'
 
 INIT_MENU_OPTIONS = [
 	{
@@ -45,7 +52,7 @@ INIT_MENU_OPTIONS = [
 		"active": True
 	},
   	{
-		"name": "Damages",
+		"name": "Failures",
 		"step": 0,
 		"leaf": True,
 		"active": True
@@ -81,7 +88,7 @@ INIT_MENU_OPTIONS = [
 		"active": False
 	},
     {
-		"name": "Risk assessment (Combined metrics/damages)",
+		"name": "Risk assessment (Combined metrics/failures)",
 		"step": 2,
 		"leaf": False,
 		"active": False
