@@ -38,7 +38,9 @@ class PipeReplacementTool:
         self.font = "Sans"
         self.courier_font = "Courier 10 Pitch"
         self.font_size = 18
-        
+
+        self.tooltip_font_full = (self.font, int(self.font_size // 1.8), 'italic')
+
         self.box_width = 1
         self.box_height = 1
         
@@ -47,7 +49,7 @@ class PipeReplacementTool:
         
         self.bg = "#F0F0F0"
         self.fg = "#000000"
-        self.gray_fg = "#333333"
+        self.gray_fg = "#777"
         self.blue_bg = "#1d2b59"
         self.light_blue_bg = "#4d648d"
         self.danger_bg = "#FF0000"
@@ -1195,7 +1197,7 @@ class PipeReplacementTool:
         img_label.image = all_images[count]
         img_label.pack(pady=20)
                 
-        tk.Label(self.middle_frame, text="Explore the results for the defined range of cell sizes", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.2))).pack(pady=10)
+        tk.Label(self.middle_frame, text="Explore the results for the defined range of cell sizes", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.3))).pack(pady=10)
         
         previous_button = tk.Button(self.middle_frame, text="Previous", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=previous_image)
         next_button = tk.Button(self.middle_frame, text="Next", width=15, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=next_image)
@@ -1331,7 +1333,7 @@ class PipeReplacementTool:
         bridges_upper_bound = tk.Label(window_frame, text=str(highest_value), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         bridges_upper_bound.grid(row=2, column=4, padx=5, pady=20, sticky=tk.SW)
         
-        composite_label = tk.Label(window_frame, text=COMPOSITE_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=(self.font, int(self.font_size // 1.5)), wraplength=int(0.9*window_width), justify='left')
+        composite_label = tk.Label(window_frame, text=COMPOSITE_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=self.tooltip_font_full, wraplength=int(0.9*window_width), justify='left')
         composite_label.grid(row=3, column=0, padx=5, pady=20, columnspan=5, sticky='w')
         
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)), command=run_topological_analysis)
@@ -1527,7 +1529,7 @@ class PipeReplacementTool:
 
         best_cell_size_label = tk.Label(window_frame, text=f"The best cell size found by the analysis is: {self.best_square_size} m.", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         best_cell_size_label.grid(row=0, column=0, padx=5, pady=20, columnspan=4)
-                
+        
         selected_cell_size_label = tk.Label(window_frame, text="Final cell size", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         selected_cell_size_label.grid(row=1, column=0, padx=5, pady=20, sticky=tk.SW)
         
@@ -1679,7 +1681,7 @@ class PipeReplacementTool:
         pipe_materials = {}
         for index, material_name in enumerate(self.unique_pipe_materials_names):
             material_label = tk.Label(window_frame, text=material_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-            material_label.grid(row=index+1, column=0, padx=5, pady=10, columnspan=3, sticky=tk.SW)
+            material_label.grid(row=index+1, column=0, padx=5, pady=10, sticky=tk.SE)
             
             pipe_materials[material_name] = tk.Entry(window_frame, width=70)
             pipe_materials[material_name].grid(row=index+1, column=3, padx=5, pady=10, columnspan=2, sticky='w')
@@ -1689,7 +1691,10 @@ class PipeReplacementTool:
         contract_work_upper_bound = 15
         
         contract_lifespan_label = tk.Label(window_frame, text="Insert lifespan of contract work", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
-        contract_lifespan_label.grid(row=index+2, column=0, padx=5, pady=20, columnspan=2, sticky=tk.SW)
+        contract_lifespan_label.grid(row=index+2, column=0, padx=5, pady=20, sticky=tk.SW)
+
+        lifespan_info = tk.Label(window_frame, text="", image=self.info_image, compound=tk.LEFT, bg=self.bg)
+        lifespan_info.grid(row=index+2, column=1, padx=5, pady=20, sticky=tk.SW)
         
         contract_lifespan_lower_bound = tk.Label(window_frame, text=str(contract_work_lower_bound), bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         contract_lifespan_lower_bound.grid(row=index+2, column=2, padx=5, pady=20, sticky=tk.SW)
@@ -1736,7 +1741,7 @@ class PipeReplacementTool:
         cell_index_info.grid(row=index+4, column=1, padx=5, pady=20, sticky=tk.SW)
 
         cell_index_entry = tk.Entry(window_frame, width=70)
-        cell_index_entry.grid(row=index+4, column=2, padx=5, pady=20, columnspan=3, sticky='w')
+        cell_index_entry.grid(row=index+4, column=3, padx=5, pady=20, columnspan=2, sticky='w')
         
         # Add the 'Run' button to the window
         run_button = tk.Button(window_frame, text="Run", width=30, background=self.blue_bg, foreground="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 1.5)),command=optimize_cell)
@@ -1751,7 +1756,8 @@ class PipeReplacementTool:
         redirected_output.grid(row=index+7, column=0, padx=5, columnspan=5)
         sys.stdout = RedirectOutput(redirected_output)
         
-        window.after_idle(lambda : make_tt(relaxation_info, TIMESPAN_TOOLTIP, 'right'))
+        window.after_idle(lambda : make_tt(lifespan_info, LIFESPAN_TOOLTIP, 'right'))
+        window.after_idle(lambda : make_tt(relaxation_info, RELAXATION_TOOLTIP, 'right'))
         window.after_idle(lambda : make_tt(cell_index_info, CELL_INDEX_TOOLTIP, 'right'))
         
         window.wait_window()
@@ -1960,7 +1966,7 @@ class PipeReplacementTool:
         cell_entry.grid(row=0, column=1, padx=5, pady=20)
         cell_entry.set(optimized_cells[0])
 
-        aim_label = tk.Label(window_frame, text=DECISION_SUPPORT_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=(self.font, int(self.font_size // 1.5)), wraplength=int(0.9*window_width), justify='left')
+        aim_label = tk.Label(window_frame, text=DECISION_SUPPORT_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=self.tooltip_font_full, wraplength=int(0.9*window_width), justify='left')
         aim_label.grid(row=1, column=0, padx=5, pady=20, columnspan=2, sticky='w')
 
         # Add the 'Run' button to the window
@@ -2027,7 +2033,7 @@ class PipeReplacementTool:
         cell_entry.grid(row=0, column=1, padx=5, pady=20)
         cell_entry.set(optimized_cells[0])
 
-        aim_label = tk.Label(window_frame, text=PIPE_GROUPING_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=(self.font, int(self.font_size // 1.5)), wraplength=int(0.9*window_width), justify='left')
+        aim_label = tk.Label(window_frame, text=PIPE_GROUPING_TOOLTIP, bg=self.bg, fg=self.gray_fg, font=self.tooltip_font_full, wraplength=int(0.9*window_width), justify='left')
         aim_label.grid(row=1, column=0, padx=5, pady=20, columnspan=2, sticky='w')
 
         # Add the 'Run' button to the window
