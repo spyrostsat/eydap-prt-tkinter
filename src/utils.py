@@ -31,7 +31,7 @@ def copy_shapefile(shp_type: str, src_path: str, project_folder: str) -> str:
     '''
     Copy the shapefile to the project folder and return the new path of the shapefile.
     '''
-    if shp_type not in ["network", "damage"]:
+    if shp_type not in ["network", "failures"]:
         raise ValueError("Invalid shapefile type")
 
     src_file_name = os.path.basename(src_path)

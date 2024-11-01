@@ -187,20 +187,20 @@ class PipeReplacementTool:
         
         def browse(browse_type: str) -> None:
             if browse_type == "save_folder":
-                folder = filedialog.askdirectory(parent=window, title="Select a folder to save the scenario")
+                folder = filedialog.askdirectory(parent=window, title="Select a folder to save the project")
                 
                 if folder:
                     save_folder_entry.delete(0, tk.END)
                     save_folder_entry.insert(tk.END, folder)
             
-            elif browse_type in ["network", "damage"]:
+            elif browse_type in ["network", "failures"]:
                 filename = filedialog.askopenfilename(parent=window, filetypes=[("Shapefiles", "*.shp")])
                 
                 if filename:
                     if browse_type == "network":
                         network_entry.delete(0, tk.END)
                         network_entry.insert(tk.END, filename)
-                    elif browse_type == "damage":
+                    elif browse_type == "failures":
                         damage_entry.delete(0, tk.END)
                         damage_entry.insert(tk.END, filename)
         
@@ -243,7 +243,7 @@ class PipeReplacementTool:
             self.project_name = name
             self.project_description = description
             self.network_shapefile = copy_shapefile("network", network, scenario_folder)
-            self.damage_shapefile = copy_shapefile("damage", damage, scenario_folder)
+            self.damage_shapefile = copy_shapefile("failures", damage, scenario_folder)
 
             # Save the scenario information to a json file
             scenario_info = {
@@ -260,7 +260,7 @@ class PipeReplacementTool:
             update_scenarios_config_file(scenario_folder, name, description)  # Update the scenarios config file
 
             window.destroy()
-            messagebox.showinfo("Success", "Scenario created successfully")
+            messagebox.showinfo("Success", "Project created successfully")
             self.landing_page_frame.destroy()
             self.main_page()
 
@@ -282,12 +282,12 @@ class PipeReplacementTool:
         window_frame.pack(expand=True, fill='both')
         window_frame.grid_propagate(False)
 
-        name_label = tk.Label(window_frame, text="Scenario name", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        name_label = tk.Label(window_frame, text="Project name", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         name_label.grid(row=0, column=0, padx=5, pady=20, sticky='w')
         name_entry = tk.Entry(window_frame, width=50, font=(self.font, int(self.font_size // 1.5)))
         name_entry.grid(row=0, column=1, padx=5, pady=20, columnspan=2, sticky='w')
         
-        description_label = tk.Label(window_frame, text="Scenario description", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        description_label = tk.Label(window_frame, text="Project description", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         description_label.grid(row=1, column=0, padx=5, pady=20, sticky='w')
         description_text = tk.Text(window_frame, height=5, width=50, font=(self.font, int(self.font_size // 1.5)))
         description_text.grid(row=1, column=1, padx=5, pady=20, columnspan=2, sticky='w')
@@ -303,10 +303,10 @@ class PipeReplacementTool:
         damage_label.grid(row=3, column=0, padx=5, pady=20, sticky='w')
         damage_entry = tk.Entry(window_frame, width=40, font=(self.font, int(self.font_size // 1.5)))
         damage_entry.grid(row=3, column=1, padx=5, pady=20, sticky='w')
-        damage_button = tk.Button(window_frame, text="Browse", command=lambda: browse("damage"), font=(self.font, int(self.font_size // 1.5)))
+        damage_button = tk.Button(window_frame, text="Browse", command=lambda: browse("failures"), font=(self.font, int(self.font_size // 1.5)))
         damage_button.grid(row=3, column=2, padx=5, pady=20, sticky='w')
         
-        save_folder_label = tk.Label(window_frame, text="Scenario save folder", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
+        save_folder_label = tk.Label(window_frame, text="Project save folder", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.5)))
         save_folder_label.grid(row=4, column=0, padx=5, pady=20, sticky='w')
         save_folder_entry = tk.Entry(window_frame, width=40, font=(self.font, int(self.font_size // 1.5)))
         save_folder_entry.grid(row=4, column=1, padx=5, pady=20, sticky='w')
@@ -333,7 +333,7 @@ class PipeReplacementTool:
         metadata_file = os.path.join(folder, "metadata.json")
         
         if not os.path.exists(metadata_file):
-            messagebox.showerror("Error", "Invalid scenario folder")
+            messagebox.showerror("Error", "Invalid project folder")
             return
         
         with open(metadata_file, "r") as f:
@@ -387,7 +387,7 @@ class PipeReplacementTool:
 
     def save_scenario(self, show_message=True):
         if not self.project_folder:
-            messagebox.showerror("Error", "No scenario to save")
+            messagebox.showerror("Error", "No project to save")
             return
         
         scenario_info = {
@@ -438,7 +438,7 @@ class PipeReplacementTool:
         update_scenarios_config_file(self.project_folder, self.project_name, self.project_description)
         
         if show_message:
-            messagebox.showinfo("Success", "Scenario saved successfully")
+            messagebox.showinfo("Success", "Project saved successfully")
 
 
     def delete_scenario(self):
@@ -448,12 +448,12 @@ class PipeReplacementTool:
             return
         
         if not os.path.exists(os.path.join(scenario_folder, "metadata.json")):
-            messagebox.showerror("Error", "Invalid scenario folder")
+            messagebox.showerror("Error", "Invalid project folder")
             return
         
-        # There must also be a folder with the name 'damage' and 'network' inside the scenario folder
-        if not os.path.exists(os.path.join(scenario_folder, "network")) or not os.path.exists(os.path.join(scenario_folder, "damage")):
-            messagebox.showerror("Error", "Invalid scenario folder")
+        # There must also be a folder with the name 'failures' and 'network' inside the scenario folder
+        if not os.path.exists(os.path.join(scenario_folder, "network")):
+            messagebox.showerror("Error", "Invalid project folder")
             return
         
         # Read the metadata file to get the project name
@@ -464,19 +464,19 @@ class PipeReplacementTool:
         
         # The scenario_name must be the same as the folder name
         if not os.path.basename(scenario_folder) == scenario_name:
-            messagebox.showerror("Error", "Invalid scenario folder")
+            messagebox.showerror("Error", "Invalid project folder")
             return
         
         all_scenarios = read_scenarios_config_file()
         
         # The scenario must be in the scenarios config file
         if not any([scenario["name"] == scenario_name for scenario in all_scenarios]):
-            messagebox.showerror("Error", "Invalid scenario folder")
+            messagebox.showerror("Error", "Invalid project folder")
             return
         
-        if messagebox.askokcancel("Delete Scenario", f"Are you sure you want to delete the scenario '{scenario_name}' in '{scenario_folder}'?"):
+        if messagebox.askokcancel("Delete Project", f"Are you sure you want to delete the project '{scenario_name}' in '{scenario_folder}'?"):
             shutil.rmtree(scenario_folder)
-            messagebox.showinfo("Success", "Scenario deleted successfully")
+            messagebox.showinfo("Success", "Project deleted successfully")
 
 
     def handle_menu_click(self, event):
@@ -486,16 +486,16 @@ class PipeReplacementTool:
             
             # Update the topology is not allowed
             if selected_item == "Setting the topology":
-                messagebox.showerror("Error", "You cannot change the topology. Instead, you can create a new scenario")
+                messagebox.showerror("Error", "You cannot change the topology. Instead, you can create a new project")
                 return
             
             # Network shapefile
             if selected_item == f"{MENU_SPACES} Pipe network":
                 self.update_middle_frame('network')
             
-            # Damages shapefile
+            # Failures shapefile
             if selected_item == f"{MENU_SPACES} Failures":
-                self.update_middle_frame('damages')
+                self.update_middle_frame('failures')
             
             # Topological analysis
             if selected_item == "Risk assessment (topological metrics)":
@@ -609,7 +609,7 @@ class PipeReplacementTool:
         pipe_label = pipe.data[0]
         cluster = int(pipe.data[1])
         cell = pipe.data[2]
-        messagebox.showinfo(title=f"Pipe clicked", message=f"Cell: {cell}\n\nPipe ID: {pipe_label}\n\nCluster: {cluster}")
+        messagebox.showinfo(title=f"Pipe clicked", message=f"Cell: {cell}\n\nPipe ID: {pipe_label}\n\nGroup: {cluster}")
 
 
     def show_pipe_grouping_info(self, info_path):
@@ -646,7 +646,7 @@ class PipeReplacementTool:
                 break
         
         window = tk.Toplevel(self.root)
-        window.title("Scenario Information")
+        window.title("Project Information")
         window.resizable(False, False)
         
         window_frame = tk.Frame(window, bg=self.bg)
@@ -659,7 +659,7 @@ class PipeReplacementTool:
         y = (self.screen_height / 2) - (window_height / 2)
         window.geometry(f"{int(window_width)}x{int(window_height)}+{int(x)}+{int(y)}")
         
-        tk.Label(window_frame, text="Scenario Name:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=0, column=0, padx=15, pady=5, sticky='w')
+        tk.Label(window_frame, text="Project Name:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=0, column=0, padx=15, pady=5, sticky='w')
         tk.Label(window_frame, text=self.project_name, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6))).grid(row=0, column=1, padx=15, pady=5, sticky='w')
         
         tk.Label(window_frame, text="Description:", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 1.6), 'bold')).grid(row=1, column=0, padx=15, pady=5, sticky='w')
@@ -780,16 +780,16 @@ class PipeReplacementTool:
         self.scenarios_frame.pack()
         self.scenarios_frame.grid_propagate(False)
         
-        tk.Label(self.scenarios_frame, text="Create a new scenario or manage existing", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, columnspan=3, padx=10, pady=10)
-        tk.Button(self.scenarios_frame, text="Create New Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=5, pady=10)
-        tk.Button(self.scenarios_frame, text="Open Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=5, pady=10)
-        tk.Button(self.scenarios_frame, text="Delete Scenario", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.delete_scenario).grid(row=1, column=2, padx=5, pady=10)
+        tk.Label(self.scenarios_frame, text="Create a new project or manage existing", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+        tk.Button(self.scenarios_frame, text="Create New Project", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.new_scenario).grid(row=1, column=0, padx=5, pady=10)
+        tk.Button(self.scenarios_frame, text="Open Project", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.open_scenario).grid(row=1, column=1, padx=5, pady=10)
+        tk.Button(self.scenarios_frame, text="Delete Project", bg=self.button_bg, fg=self.button_fg, font=(self.font, int(self.font_size // 1.7)), activebackground=self.button_bg, activeforeground=self.button_fg, command=self.delete_scenario).grid(row=1, column=2, padx=5, pady=10)
         
         self.recent_scenarios_frame = tk.Frame(self.landing_page_frame, bg=self.bg, width=self.width, height=300)
         self.recent_scenarios_frame.pack(padx=10, pady=10)
         self.recent_scenarios_frame.grid_propagate(False)
         
-        tk.Label(self.recent_scenarios_frame, text="Recent scenarios", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, pady=15, sticky='w')
+        tk.Label(self.recent_scenarios_frame, text="Recent projects", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size))).grid(row=0, column=0, pady=15, sticky='w')
         
         refresh_scenarios_config_file()  # Make sure the .prt.conf file is up to date
         
@@ -819,7 +819,7 @@ class PipeReplacementTool:
         
         self.fileMenu.delete(0)  # Remove the 'Open' option from the File menu
         
-        self.helpMenu.add_command(label="Scenario Information", command=self.show_scenario_info)
+        self.helpMenu.add_command(label="Project Information", command=self.show_scenario_info)
         
         self.fileMenu.add_command(label="Save Project", command=self.save_scenario)
         self.fileMenu.add_separator()
@@ -955,7 +955,7 @@ class PipeReplacementTool:
         padx_content = 40
         pady = 10
         
-        tk.Label(self.right_frame, text="Scenario Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
+        tk.Label(self.right_frame, text="Project Properties", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // 1.5), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
         
         if self.closeness_metric or self.betweeness_metric or self.bridges_metric:
             tk.Label(self.right_frame, text=f"Topological metrics", fg=self.fg, bg=self.white, font=(self.font, int(self.font_size // LEFT_RIGHT_FRAME_TITLE_DIV), 'bold')).pack(padx=padx_title, pady=pady, anchor='w')
@@ -1015,7 +1015,7 @@ class PipeReplacementTool:
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
                 tk.Label(self.middle_frame, text=material, bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2))).pack(side='left')
         
-        if display_type == 'damages':
+        if display_type == 'failures':
             map_widget = tkintermapview.TkinterMapView(self.middle_frame, width=int(self.width * self.map_width_multiplier), height=int(self.top_height * map_mult_no_legend))
             map_widget.pack()
             
@@ -1081,7 +1081,7 @@ class PipeReplacementTool:
             # Reset map button
             tk.Button(self.middle_frame, text=RESET_MAP_TEXT, command=lambda: map_widget.fit_bounding_box((self.network_bounding_box[3], self.network_bounding_box[0]), (self.network_bounding_box[1], self.network_bounding_box[2])), bg=self.blue_bg, fg="#ffffff", activebackground=self.blue_bg, activeforeground="#ffffff", font=(self.font, int(self.font_size // 2))).pack(anchor=RESET_MAP_ANCHOR, padx=RESET_MAP_PADX, pady=RESET_MAP_PADY)
 
-            tk.Label(self.middle_frame, text="Cluster", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
+            tk.Label(self.middle_frame, text="Group", bg=self.bg, fg=self.fg, font=(self.font, int(self.font_size // 2), 'bold')).pack(side='left', padx=60)
             
             for material, color in pipes_colors.items():
                 tk.Label(self.middle_frame, text="    ", bg=color, font=(self.font, int(self.font_size // 2))).pack(side='left', padx=10)
